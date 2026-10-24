@@ -203,7 +203,7 @@ class AdminApp:
                 except (OSError, ValueError, KeyError, TypeError):
                     last = "NIEBADANY"
                 hosting = bw_fleet.hosting_info(site)
-                access = {"unknown": "nieustalony", "ftp": "FTP (SSH?)",
+                access = {"unknown": "nieustalony", "ftp": "FTP (TLS?)",
                           "ssh": "SSH", "ftps": "FTPS", "sftp": "SFTP"}.get(
                               hosting["access"], "nieustalony")
                 self.site_list.insert("", "end", iid=str(index), values=(

@@ -1,0 +1,18 @@
+# Podstawowe pakiety Kali WSL 2
+# Jeden pakiet w wierszu. GitHub CLI (gh) instalujemy osobno z repozytorium GitHub.
+git
+openssh-client
+rsync
+curl
+wget
+jq
+bind9-dnsutils
+whois
+traceroute
+mtr-tiny
+nmap
+tmux
+unzip
+zip
+ca-certificates
+gnupg

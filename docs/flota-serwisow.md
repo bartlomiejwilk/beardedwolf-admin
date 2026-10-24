@@ -102,6 +102,8 @@ Pulpit automatycznie rozpoczyna kontrole WWW/TLS po uruchomieniu programu i powt
 
 Status WWW/TLS nie jest pełnym audytem i nie oznacza prawidłowej dostępności cyfrowej WCAG ani braku złośliwego kodu.
 
+W górnym pasku pulpitu znajduje się też **Sprawdź aktualizacje WP**. Po potwierdzeniu uruchamia sekwencyjne odczyty WP-CLI dla wszystkich serwisów z potwierdzonym zakresem, przypisanym profilem SSH i zweryfikowanym katalogiem WordPress. Wyniki uzupełniają liczbę aktualizacji w kafelkach. Operacja nie aktualizuje żadnych komponentów. Serwisy bez kompletnych danych nie są zgadywane ani odpytywane przez SSH. Ze względu na ograniczenia współdzielonych hostingów zbiorczego sprawdzania nie uruchamiamy automatycznie co 15 minut. 
+
 ### Sprawdzanie aktualizacji Core i wtyczek przez SSH
 
 W kafelku WordPress kliknij **Aktualizacje WP**. Operacja wymaga:

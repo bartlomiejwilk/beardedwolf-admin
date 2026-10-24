@@ -98,7 +98,7 @@ Pierwszą zakładką aplikacji jest teraz **Pulpit** z przewijaną siatką kafel
 - **Czas ostatniej kontroli**: wyraźny znacznik UTC. Kafelek nie udaje, że jest aktualny, zanim pomiar się zakończy.
 - **WordPress**: po odrębnym sprawdzeniu przez SSH liczbę wtyczek do aktualizacji oraz dostępność aktualizacji Core. Wcześniej wyświetla „nie sprawdzono”.
 
-Pulpit sam rozpoczyna *jednorazowe* kontrole WWW/TLS po uruchomieniu programu, ale **wyłącznie dla serwisów z wcześniej potwierdzonym zakresem** i włączonymi testami publicznymi. Limit to cztery jednoczesne serwisy; każdy wykonuje pojedyncze żądanie HEAD HTTPS i osobne zestawienie certyfikatu. Ewentualne przekierowania są opisywane, ale nie podążamy po ich celach. „NIE SPRAWDZONO” oznacza brak wyniku, a nie bezpieczeństwo. Po wybraniu filtra grupy można zawęzić widok. Kliknięcie **Szczegóły** przechodzi do odpowiedniego serwisu na liście.
+Pulpit automatycznie rozpoczyna kontrole WWW/TLS po uruchomieniu programu i powtarza je co 15 minut, dopóki aplikacja jest otwarta, ale **wyłącznie dla serwisów z wcześniej potwierdzonym zakresem** i włączonymi testami publicznymi. Limit to cztery jednoczesne serwisy; każdy wykonuje pojedyncze żądanie HEAD HTTPS i osobne zestawienie certyfikatu. Ewentualne przekierowania są opisywane, ale nie podążamy po ich celach. „NIE SPRAWDZONO” oznacza brak wyniku, a nie bezpieczeństwo. Po wybraniu filtra grupy można zawęzić widok. Kliknięcie **Szczegóły** przechodzi do odpowiedniego serwisu na liście.
 
 Status WWW/TLS nie jest pełnym audytem i nie oznacza prawidłowej dostępności cyfrowej WCAG ani braku złośliwego kodu.
 
@@ -110,7 +110,7 @@ W kafelku WordPress kliknij **Aktualizacje WP**. Operacja wymaga:
 3. **bezwzględnej ścieżki katalogu WordPress** w profilu serwisu;
 4. programu \`wp\` (WP-CLI) **na zdalnym hostingu**, bo lokalna instalacja WP-CLI na Kali nie wystarczy.
 
-Przycisk **Sprawdź aktualizacje** uruchamia przez SSH komendy odczytowe \`wp core version\`, \`wp core check-update --format=json\` i \`wp plugin list --format=json\`. Wyniki aktualizacji są przechowywane tylko w pamięci aplikacji, nie uruchamiają instalacji i nie są dodawane do GitHuba.
+Przycisk **Sprawdź aktualizacje** uruchamia przez SSH komendy diagnostyczne (WP-CLI może odświeżać metadane aktualizacji w bazie) \`wp core version\`, \`wp core check-update --format=json\` i \`wp plugin list --format=json\`. Wyniki aktualizacji są przechowywane tylko w pamięci aplikacji, nie uruchamiają instalacji i nie są dodawane do GitHuba.
 
 Po przeglądzie można zaznaczyć pojedyncze wtyczki i kliknąć **Aktualizuj zaznaczone wtyczki**, albo użyć **Aktualizuj WordPress Core**. Nie używamy \`--all\`, \`--force\` ani \`--insecure\`. Tuż przed instalacją program ponownie sprawdza wersję i dostępność wybranej aktualizacji, aby nie wykonać operacji ze starych danych.
 

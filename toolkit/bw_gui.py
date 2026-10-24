@@ -226,8 +226,9 @@ class AdminApp:
                 elif event[0] == "connection":
                     self.status.set(event[1])
                     messagebox.showinfo("Test SSH", event[1], parent=self.root)
-                self.running = False
-                self.start_button.configure(state="normal")
+                if event[0] in ("result", "error"):
+                    self.running = False
+                    self.start_button.configure(state="normal")
         except queue.Empty:
             pass
         self.root.after(120, self.pump)
@@ -278,6 +279,12 @@ class AdminApp:
             messagebox.showerror("Nie zapisano serwera", str(exc), parent=self.root)
             return
         self.refresh_servers()
+        for index, item in enumerate(self.profiles):
+            if item["alias"] == profile["alias"]:
+                self.server_list.selection_set(str(index))
+                self.server_list.focus(str(index))
+                self.server_list.see(str(index))
+                break
         self.status.set("Dodano profil: " + profile["alias"])
         self.alias.set("")
         self.host.set("")

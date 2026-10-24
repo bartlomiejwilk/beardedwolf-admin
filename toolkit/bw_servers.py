@@ -12,9 +12,14 @@ CONFIG_DIR = Path.home() / ".config" / "beardedwolf"
 PROFILE_FILE = CONFIG_DIR / "servers.json"
 SSH_DIR = Path.home() / ".ssh"
 SSH_CONFIG = SSH_DIR / "config"
-KEY_FILE = SSH_DIR / "id_ed25519_bw_servers"
+
 BEGIN = "# BEGIN BEARDEDWOLF SERVERS"
 END = "# END BEARDEDWOLF SERVERS"
+
+
+def key_for(profile):
+    """Separate protected ED25519 identity for each host alias."""
+    return SSH_DIR / ("id_ed25519_bw_" + profile["alias"])
 
 
 def validate(alias, host, user, port):
@@ -80,7 +85,7 @@ def make_ssh_config(profiles):
             f"    HostName {p['host']}",
             f"    User {p['user']}",
             f"    Port {p['port']}",
-            f"    IdentityFile {KEY_FILE}",
+            f"    IdentityFile {key_for(p)}",
             "    IdentitiesOnly yes",
             "    AddKeysToAgent yes",
             "    ForwardAgent no",
@@ -128,17 +133,19 @@ def terminal(args, *, title="BeardedWolf SSH", use_agent=False):
     ], start_new_session=True)
 
 
-def create_key():
-    if KEY_FILE.exists() or Path(str(KEY_FILE) + ".pub").exists():
-        raise ValueError("Klucz BeardedWolf SSH już istnieje. Nie nadpisuję go.")
+def create_key(profile):
+    key_file = key_for(profile)
+    if key_file.exists() or Path(str(key_file) + ".pub").exists():
+        raise ValueError("Klucz dla tego serwera już istnieje. Nie nadpisuję go.")
     SSH_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
     SSH_DIR.chmod(0o700)
-    terminal(["ssh-keygen", "-t", "ed25519", "-a", "100", "-f", str(KEY_FILE),
-              "-C", "BeardedWolf-Admin"], title="Nowy klucz serwerów SSH")
+    terminal(["ssh-keygen", "-t", "ed25519", "-a", "100", "-f", str(key_file),
+              "-C", "BeardedWolf-" + profile["alias"]],
+             title="Nowy klucz SSH: " + profile["alias"])
 
 
 def install_public_key(profile):
-    public_key = Path(str(KEY_FILE) + ".pub")
+    public_key = Path(str(key_for(profile)) + ".pub")
     if not public_key.is_file():
         raise ValueError("Najpierw wygeneruj klucz SSH do serwerów.")
     terminal(["ssh-copy-id", "-i", str(public_key), "-p",
@@ -147,7 +154,7 @@ def install_public_key(profile):
 
 
 def connect(profile):
-    if not KEY_FILE.is_file():
+    if not key_for(profile).is_file():
         raise ValueError("Najpierw wygeneruj osobny klucz SSH do serwerów.")
     terminal(["ssh", profile["alias"]], title="SSH: " + profile["alias"], use_agent=True)
 

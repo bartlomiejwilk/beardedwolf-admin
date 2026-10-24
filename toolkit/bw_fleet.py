@@ -14,6 +14,7 @@ import shutil
 from pathlib import Path
 from pathlib import PurePosixPath
 import bw_servers
+import bw_discover
 import secrets
 import subprocess
 import sys
@@ -319,6 +320,17 @@ def safe_report(report):
             escape(details) + "</pre></td></tr>"
         )
     alerts = "".join("<li>" + escape(text) + "</li>" for text in report["alerts"])
+    discovery = report.get("discovery") or {}
+    discovery_rows = []
+    for key in ("http_status", "type_suggestion", "confidence", "cname", "redirect_target"):
+        value = discovery.get(key)
+        if value is not None:
+            discovery_rows.append("<li><strong>" + escape(key) + ":</strong> " +
+                                  escape(str(value)) + "</li>")
+    for evidence in discovery.get("evidence", []):
+        discovery_rows.append("<li>" + escape(evidence) + "</li>")
+    for error in discovery.get("errors", []):
+        discovery_rows.append("<li>" + escape(error) + "</li>")
     html = """<!doctype html>
 <html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>BeardedWolf: raport audytu</title>
@@ -328,6 +340,9 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0}tr:nth-child(even){back
 </head><body><main><h1>BeardedWolf: audyt serwisu</h1>
 <p><strong>Domena:</strong> DOMAIN</p><p><strong>Data:</strong> DATE</p>
 <p><strong>Stan:</strong> STATUS. Porównanie tylko z zatwierdzonym baseline.</p>
+<h2>Rozpoznanie platformy (poszlaki)</h2><ul>DISCOVERY</ul>
+<p>Brak cech WordPressa nie oznacza, że strona nie korzysta z WordPressa.
+Dostawca hostingu oraz SSH/FTP wymagają osobnego potwierdzenia.</p>
 <h2>Zmiany i ostrzeżenia</h2><ul>ALERTS</ul>
 <h2>Kontrole publiczne</h2>
 <table><thead><tr><th scope="col">Kontrola</th><th scope="col">Status</th><th scope="col">Wynik</th></tr></thead>
@@ -340,6 +355,7 @@ Brak alertu nie oznacza bezpieczeństwa serwisu. Raport zapisany wyłącznie lok
             .replace("DATE", escape(report["timestamp"]))
             .replace("STATUS", escape(report["state"]))
             .replace("ALERTS", alerts or "<li>Brak zgłoszonych zmian w wykonanych kontrolach.</li>")
+            .replace("DISCOVERY", "".join(discovery_rows) or "<li>Brak dostępnych danych</li>")
             .replace("ROWS", "\n".join(rows)))
     html_path = json_path.with_suffix(".html")
     if html_path.is_symlink():
@@ -403,6 +419,19 @@ def public_probe(site):
     domain = site["domain"]
     observed = []
     failures = []
+    # Rozpoznanie jest wykonywane przy każdym teście, ale nie nadpisuje ręcznych ustawień.
+    try:
+        discovery = bw_discover.inspect_public(domain)
+        if (site["type"] == "sprawdzic" and
+                discovery["type_suggestion"] == "wordpress" and
+                discovery["confidence"] == "wysoka"):
+            # Tylko wysoko wiarygodny WordPress, zachowując grupę i przypisany hosting.
+            update_site(domain, site["group"], "wordpress")
+            site = dict(site, type="wordpress")
+            discovery["auto_updated"] = True
+    except Exception as exc:
+        discovery = {"errors": ["Rozpoznanie niedostępne: " + type(exc).__name__]}
+
 
     for check_id, kind, title in [
         ("T34", "DNS", "Rekordy DNS"),
@@ -491,6 +520,7 @@ def public_probe(site):
         "state": "WYMAGA_WERYFIKACJI" if failures or (baseline and changed) else
                  ("BRAK_BASELINE" if not baseline else "BEZ_ZMIAN"),
         "checks": observed, "alerts": failures + changed, "baseline": bool(baseline),
+        "discovery": discovery,
         "host_checks_state": "NOT_RUN_NO_AUTHENTICATED_SESSION"
     }
     paths = safe_report(report)

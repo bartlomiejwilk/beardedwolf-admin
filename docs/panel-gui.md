@@ -45,6 +45,8 @@ Wpisujesz alias (np. `ovh-jaslo`), host SSH, login i port, po czym zapisujesz pr
 - `~/.ssh/config` (sekcja oznaczona jako zarządzana przez BeardedWolf);
 - `~/.ssh/id_ed25519_bw_<alias>` (oddzielny klucz prywatny **dla każdego profilu serwera i każdego komputera**, bez synchronizacji).
 
+**Edycja i usuwanie profili:** wybierz serwer w tabeli. Formularz automatycznie wczyta jego ustawienia, a przycisk zmieni nazwę na **Zapisz zmiany**. Możesz zmienić adres SSH, login i port bez generowania nowego klucza. Alias jest zablokowany podczas edycji, bo odpowiada nazwie pliku klucza SSH (np. `jdk` → `~/.ssh/id_ed25519_bw_jdk`). Przycisk **Anuluj edycję / wyczyść** wraca do dodawania nowego serwera. **Usuń zaznaczony** wymaga potwierdzenia i usuwa tylko profil lokalny i sekcję aliasu w konfiguracji SSH. Nie kasuje klucza prywatnego/publicznego i nie wycofuje klucza z `authorized_keys` na serwerze. Kopie konfiguracji są zapisywane w `~/.ssh/config.beardedwolf.original.bak`, `~/.ssh/config.beardedwolf.previous.bak` i `~/.config/beardedwolf/servers.json.previous.bak` (jeśli poprzednie pliki istniały). Dla całkowitego odebrania dostępu należy dodatkowo unieważnić klucz publiczny na serwerze z zachowaniem uprawnień administracyjnych.
+
 **Pierwsza konfiguracja dostępu do serwera:**
 
 1. **Zapisz profil serwera**: alias, adres hosta, login SSH i port. Wybierz go na liście.
@@ -81,3 +83,7 @@ Jeżeli `~/.local/bin/bw` już istnieje, ale działa polecenie `bw doctor`, pomi
 ```
 
 Jeżeli druga komenda działa, uruchom najnowszy instalator `bash install/setup-gui.sh` po `git pull --ff-only`. Instalator sam wybierze właściwą wersję. Nie wykonuj `sudo ln -sf /usr/bin/python3.14 /usr/bin/python3`; zmiana globalnej ścieżki interpretera może mieć uboczne skutki.
+
+### Przykład: korekta profilu JDK na PC-Wilk
+
+Wybierz już istniejący alias `jdk` (nie `ovh-jdk`). Ustaw host na `ssh.cluster126.hosting.ovh.net`, login `jdkjasj`, port `22`, a następnie kliknij **Zapisz zmiany**. Klucz `~/.ssh/id_ed25519_bw_jdk` pozostanie nietknięty. Sprawdź w terminalu `ssh -G jdk | grep -E '^(hostname|user|port|identityfile) '`. Samo poprawienie profilu nie oznacza jeszcze, że klucz publiczny Kali jest uprawniony na serwerze: wymaga to osobnej, świadomej autoryzacji.

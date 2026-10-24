@@ -40,6 +40,7 @@ class AdminApp:
         self.dashboard_running = False
         self.wp_cache = {}
         self.wp_dialogs = {}
+        self.wp_batch_running = False
         self.fleet_running = False
         self.last_fleet_report = None
         self.table_sort = {}
@@ -120,6 +121,8 @@ class AdminApp:
                   font=("Sans", 14, "bold")).pack(side="left")
         ttk.Button(header, text="Odśwież stan WWW i TLS",
                    command=self.refresh_dashboard).pack(side="right", padx=(7, 0))
+        ttk.Button(header, text="Sprawdź aktualizacje WP",
+                   command=self.refresh_wp_batch).pack(side="right", padx=(7, 0))
         groups = ["Wszystkie"] + sorted({s.get("group", "inne")
                                         for s in bw_fleet.inventory()["sites"]})
         combo = ttk.Combobox(header, textvariable=self.dashboard_filter,
@@ -289,6 +292,47 @@ class AdminApp:
             )
         except OSError as exc:
             messagebox.showerror("Nie otwarto strony", str(exc), parent=self.root)
+
+    def refresh_wp_batch(self):
+        if self.wp_batch_running:
+            return
+        eligible = []
+        for site in bw_fleet.inventory()["sites"]:
+            if (site.get("type") == "wordpress" and site.get("authorized") and
+                    site.get("ssh_alias") and site.get("wp_root")):
+                eligible.append(site)
+        if not eligible:
+            messagebox.showinfo(
+                "Brak skonfigurowanych WordPressów",
+                "Do zbiorczego sprawdzania wymagane są: platforma WordPress, "
+                "potwierdzony zakres, profil SSH z kluczem i zweryfikowana ścieżka WWW. "
+                "Przypisz te dane w zakładce Wszystkie serwisy.",
+                parent=self.root
+            )
+            return
+        if not messagebox.askyesno(
+            "Zbiorcza kontrola WordPress",
+            f"Sprawdzić aktualizacje Core i wtyczek na {len(eligible)} "
+            "skonfigurowanych serwisach przez SSH? "
+            "WP-CLI może odświeżyć metadane aktualizacji w bazie, "
+            "ale niczego nie zainstaluje. "
+            "Sprawdzanie będzie sekwencyjne, by nie przeciążać hostingu.",
+            parent=self.root
+        ):
+            return
+        self.wp_batch_running = True
+        self.dashboard_hint.set(
+            f"Sprawdzam aktualizacje WordPress na {len(eligible)} stronach...")
+        threading.Thread(target=self.wp_batch_worker, args=(eligible,), daemon=True).start()
+
+    def wp_batch_worker(self, sites):
+        for site in sites:
+            try:
+                report = bw_wp.list_updates(site)
+                self.messages.put(("wp_batch_site", site["domain"], report, None))
+            except Exception as exc:
+                self.messages.put(("wp_batch_site", site["domain"], None, str(exc)))
+        self.messages.put(("wp_batch_finished", len(sites)))
 
     def open_site_details(self, domain):
         for iid in self.site_list.get_children():
@@ -1356,6 +1400,21 @@ class AdminApp:
                 elif event[0] == "connection":
                     self.status.set(event[1])
                     messagebox.showinfo("Test SSH", event[1], parent=self.root)
+                elif event[0] == "wp_batch_site":
+                    _, domain, data, error = event
+                    if error:
+                        self.dashboard_hint.set("Nie sprawdzono aktualizacji " + domain +
+                                                ": " + error)
+                    else:
+                        self.wp_cache[domain] = data
+                        self.paint_dashboard_card(domain)
+                elif event[0] == "wp_batch_finished":
+                    self.wp_batch_running = False
+                    self.dashboard_hint.set(
+                        f"Zakończono sprawdzanie aktualizacji WordPress na "
+                        f"{event[1]} serwisach. Brak wyniku SSH oznacza brak danych, "
+                        "nie brak aktualizacji."
+                    )
                 elif event[0] == "wp_check_done":
                     _, domain, data, error = event
                     record = self.wp_dialogs.get(domain)

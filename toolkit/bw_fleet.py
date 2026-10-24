@@ -509,8 +509,13 @@ def main():
     args = parser.parse_args()
     if args.command == "sites":
         for site in inventory()["sites"]:
+            hosting = hosting_info(site)
             print(("✓ " if site["authorized"] else "○ ") + site["domain"] +
-                  "  [" + site["group"] + ", " + site["type"] + "]")
+                  "  [" + site["group"] + ", " + site["type"] + "]" +
+                  " hosting=" + hosting["provider"] +
+                  " protokol=" + hosting["access"] +
+                  " host=" + (hosting["host"] or "nieustalony") +
+                  " ssh_alias=" + (site.get("ssh_alias") or "brak"))
         return 0
     if args.command == "checks":
         for check in catalog():

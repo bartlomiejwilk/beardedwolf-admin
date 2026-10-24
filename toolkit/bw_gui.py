@@ -290,7 +290,7 @@ class AdminApp:
         ttk.Label(controls,
                   text="Sprawdzenie: tylko odczyt WP-CLI przez SSH. Aktualizacje wymagają "
                        "osobnego potwierdzenia, działającego backupu plików i bazy. "
-                       "Narzędzie nie tworzy automatycznie kopii i nie przywraca strony.",
+                       "Narzędzie nie tworzy automatycznie kopii i nie przywraca strony. Przy aktualizacji Core wykonywana jest też migracja bazy WordPress.",
                   wraplength=880).pack(anchor="w", pady=(7, 9))
         details = tk.StringVar(value="Core: nie sprawdzono")
         ttk.Label(controls, textvariable=details,
@@ -407,7 +407,7 @@ class AdminApp:
             "Zmiana produkcyjnej strony WordPress",
             label + "\n\nCzy potwierdzasz, że posiadasz aktualną, odtwarzalną "
             "kopię BAZY DANYCH I PLIKÓW strony oraz możliwość jej przywrócenia? "
-            "BeardedWolf Admin NIE tworzy i NIE testuje kopii automatycznie. "
+            "BeardedWolf Admin NIE tworzy i NIE testuje kopii automatycznie. Przy aktualizacji Core zostanie także wykonane wp core update-db. "
             "Zmiana może spowodować niedostępność serwisu.",
             parent=record["window"]
         ):
@@ -444,6 +444,18 @@ class AdminApp:
             error = None
         except Exception as exc:
             error = str(exc)
+        try:
+            action = "WordPress Core" if kind == "core" else "Wtyczki WordPress"
+            details = "Zakończone operacje: " + str(len(results))
+            if error:
+                details += ". Błąd: " + error
+            bw_wp.record_operation(
+                domain, action,
+                target if kind == "core" else ", ".join(entry["name"] for entry in chosen),
+                not bool(error), details
+            )
+        except (OSError, ValueError):
+            error = (error + ". " if error else "") + "Nie zapisano dziennika aktualizacji."
         self.messages.put(("wp_update_done", domain, kind, results, error))
 
     def sort_table(self, tree, column):
@@ -1350,8 +1362,8 @@ class AdminApp:
                         record["status"].set(
                             ("BŁĄD: " + error if error else
                              "Zakończono: " + " | ".join(results)) +
-                            (" | Sprawdź potrzebę migracji bazy wp core update-db "
-                             "oraz działanie strony i dziennik błędów."
+                            (" | Migrację bazy WordPress wykonano. Sprawdź działanie "
+                             "strony i dziennik błędów."
                              if kind == "core" and not error else "")
                         )
                         # Lista jest nieaktualna do czasu ponownego sprawdzenia.

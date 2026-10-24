@@ -21,16 +21,31 @@ repo="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 sudo apt-get update
 sudo apt-get install -y python3-tk keychain xdg-utils xfce4-terminal openssh-client
 
-# Uzywamy systemowego Pythona (z pakietami apt), nie binarnego z PATH
-# (np. /usr/local/bin/python3 lub srodowiska wirtualnego).
-PYTHON=/usr/bin/python3
-if ! "$PYTHON" -c 'import tkinter; print("Tkinter jest dostepny:", tkinter.TkVersion)'; then
-  echo "Nie udalo sie zaladowac tkinter z systemowego Pythona." >&2
-  echo "Python w PATH: $(command -v python3 || true)" >&2
-  echo "Python systemowy: $("$PYTHON" --version 2>&1)" >&2
-  dpkg-query -W python3-tk >&2 || true
+# Nie zakladamy, ze /usr/bin/python3 ma te sama wersje co python3-tk.
+# Snapshot Kali moze miec domyslnie Python 3.13 i python3-tk dla 3.14.
+PYTHON=""
+for candidate in /usr/bin/python3.14 /usr/bin/python3 /usr/bin/python3.15 /usr/bin/python3.13; do
+  if [[ -x "$candidate" ]] && "$candidate" -c 'import tkinter' >/dev/null 2>&1; then
+    PYTHON="$candidate"
+    break
+  fi
+done
+if [[ -z "$PYTHON" ]]; then
+  echo "Brak zgodnego interpretera Python z modułem tkinter." >&2
+  echo "Wersje interpreterow:" >&2
+  for candidate in /usr/bin/python3 /usr/bin/python3.13 /usr/bin/python3.14 /usr/bin/python3.15; do
+    if [[ -x "$candidate" ]]; then
+      "$candidate" --version >&2 || true
+      "$candidate" -c 'import tkinter' >&2 || true
+    fi
+  done
+  echo "Zainstalowane pakiety Tkinter:" >&2
+  dpkg-query -W python3-tk python3.14-tk python3.13-tk >&2 || true
+  echo "Nie zmieniaj globalnego dowiazania /usr/bin/python3. Wyslij powyzsze informacje." >&2
   exit 1
 fi
+printf 'Interpreter GUI: %s - ' "$PYTHON"
+"$PYTHON" -c 'import tkinter; print("Tkinter", tkinter.TkVersion)'
 
 cache_dir="$HOME/.cache/beardedwolf-admin/pycache"
 mkdir -p "$cache_dir"
@@ -49,8 +64,8 @@ Version=1.0
 Name=BeardedWolf Admin
 GenericName=Panel diagnostyczny i SSH
 Comment=Testy DNS, TLS i WWW oraz bezpieczne polaczenia SSH
-Exec=/usr/bin/python3 $repo/toolkit/bw_gui.py
-TryExec=/usr/bin/python3
+Exec=$PYTHON $repo/toolkit/bw_gui.py
+TryExec=$PYTHON
 Icon=utilities-system-monitor
 Terminal=false
 StartupNotify=true
@@ -75,5 +90,5 @@ fi
 
 printf '\nGotowe. Ikona na pulpicie Kali: %s\n' "$desktop_shortcut"
 printf 'Mozesz uruchomic bez pulpitu klikajac wpis w menu aplikacji XFCE.\n'
-printf 'Test w terminalu sesji graficznej: /usr/bin/python3 %s/toolkit/bw_gui.py\n' "$repo"
+printf 'Test w terminalu sesji graficznej: %s %s/toolkit/bw_gui.py\n' "$PYTHON" "$repo"
 printf 'Wszystkie profile i klucze SSH zostaja w katalogu domowym, poza repozytorium.\n'

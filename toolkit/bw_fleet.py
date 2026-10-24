@@ -9,6 +9,7 @@ import importlib.util
 from importlib.machinery import SourceFileLoader
 import json
 import os
+import re
 import shutil
 from pathlib import Path
 from pathlib import PurePosixPath
@@ -27,6 +28,7 @@ SETTINGS = Path.home() / ".config" / "beardedwolf"
 SITES_FILE = SETTINGS / "sites.json"
 CATALOG_FILE = ROOT / "config" / "checks.json"
 INITIAL_SITES = ROOT / "config" / "sites.json"
+HOSTING_DEFAULTS = ROOT / "config" / "hosting-defaults.json"
 REPORT_DIR = Path.home() / "beardedwolf" / "raporty" / "FLEET"
 
 loader = SourceFileLoader("bw_fleet_base", str(ROOT / "toolkit" / "bw"))
@@ -76,12 +78,63 @@ def atomic_json(path, value):
             os.unlink(tmp)
 
 
+HOSTING_ACCESS = {"unknown", "ssh", "ftp", "ftps", "sftp"}
+
+
+def normalize_hosting(provider=None, access="unknown", host=None, port=None, user=None):
+    """Keep server metadata separate from site platform and SSH authorization."""
+    provider = (provider or "nieustalony").strip()
+    if not provider or len(provider) > 80 or any(ord(x) < 32 or ord(x) == 127 for x in provider):
+        raise ValueError("Nieprawidłowa nazwa dostawcy hostingu")
+    if access not in HOSTING_ACCESS:
+        raise ValueError("Dostęp musi być SSH, FTP, FTPS, SFTP lub nieustalony")
+    host = (host or "").strip() or None
+    if host and (len(host) > 253 or not re.fullmatch(
+            r"[A-Za-z0-9][A-Za-z0-9.:-]*", host)):
+        raise ValueError("Adres hosta musi być nazwą DNS lub adresem IP bez loginu i schematu URL")
+    if port in ("", None):
+        port = None
+    else:
+        try:
+            port = int(port)
+        except (ValueError, TypeError) as exc:
+            raise ValueError("Port musi być liczbą od 1 do 65535") from exc
+        if not 1 <= port <= 65535:
+            raise ValueError("Port musi być liczbą od 1 do 65535")
+    if port is not None and not host:
+        raise ValueError("Nie podawaj portu bez adresu hosta")
+    user = (user or "").strip() or None
+    if user and (len(user) > 90 or not re.fullmatch(r"[a-zA-Z0-9_][a-zA-Z0-9_.@-]*", user)):
+        raise ValueError("Nieprawidłowy login serwera; nie wpisuj hasła ani adresu URL")
+    return {"provider": provider, "access": access, "host": host, "port": port, "user": user}
+
+
+def hosting_defaults():
+    raw = json.loads(HOSTING_DEFAULTS.read_text(encoding="utf-8"))["sites"]
+    return {domain: normalize_hosting(**details) for domain, details in raw.items()}
+
+
+def hosting_info(site):
+    """Read stored metadata, compatible with older local inventories."""
+    raw = site.get("hosting")
+    return normalize_hosting(**raw) if raw else normalize_hosting()
+
+
 def inventory():
     if not SITES_FILE.exists():
         defaults = json.loads(INITIAL_SITES.read_text(encoding="utf-8"))
         atomic_json(SITES_FILE, defaults)
     payload = json.loads(SITES_FILE.read_text(encoding="utf-8"))
     rows = payload["sites"]
+    defaults = hosting_defaults()
+    migrated = False
+    for site in rows:
+        if "hosting" not in site:
+            site["hosting"] = dict(defaults.get(site["domain"], normalize_hosting()))
+            migrated = True
+    if migrated:
+        # One-time extension of the local inventory, preserving user edits and SSH mappings.
+        atomic_json(SITES_FILE, payload)
     seen = set()
     for site in rows:
         domain = base.domain_name(site["domain"])
@@ -121,6 +174,7 @@ def add_site(domain, group, platform):
         "id": domain, "domain": domain, "group": group, "type": platform,
         "public_checks": True, "authorized": False,
         "ssh_alias": None, "wp_root": None,
+        "hosting": normalize_hosting(),
         "notes": "Nowy serwis: wymaga potwierdzenia uprawnień i konfiguracji.",
     })
     atomic_json(SITES_FILE, payload)
@@ -140,6 +194,19 @@ def update_site(domain, group, platform):
             atomic_json(SITES_FILE, payload)
             return
     raise ValueError("Nie znaleziono serwisu: " + domain)
+
+
+def update_hosting(domain, provider, access, host=None, port=None, user=None):
+    """Save nonsecret endpoint information locally. Never initiate a connection."""
+    domain = base.domain_name(domain)
+    info = normalize_hosting(provider, access, host, port, user)
+    payload = inventory()
+    for site in payload["sites"]:
+        if site["domain"] == domain:
+            site["hosting"] = info
+            atomic_json(SITES_FILE, payload)
+            return info
+    raise ValueError("Brak serwisu w inwentaryzacji: " + domain)
 
 
 def remove_site(domain):

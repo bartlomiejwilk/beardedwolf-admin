@@ -93,3 +93,11 @@ Lista serwisow wyswietla teraz osobno **platforme**, **hosting**, **potwierdzony
 Klikniecie **Test wybranego** dla domeny o platformie `sprawdzic` wykonuje dodatkowo jednorazowa analize strony glownej i CNAME. Gdy pojawia sie silne sygnaly WordPressa, panel zapisuje `wordpress` w lokalnym rejestrze; przy slabszych sygnalach tylko pokazuje sugestie i dowody w raporcie, bez nadpisywania ustawien. Publiczny HTTP/DNS nie potwierdza dostawcy hostingu ani dostepu SSH.
 
 Przycisk **Import FileZilla** pozwala na PC-Wilk wskazac lokalny `FileZilla.xml` / `sitemanager.xml` i przypisac wybrane metadane do jednej zaznaczonej strony. Import nie pobiera wartosci pola hasla `Pass`, nie dekoduje Base64, nie przenosi `LocalDir` i `RemoteDir`, nie wykonuje polaczen i nie publikuje eksportu w GitHub. Hasla przechowujemy w Bitwardenie. Szczegoly: [docs/flota-serwisow.md](docs/flota-serwisow.md).
+
+## Pulpit kafelków i zarządzanie aktualizacjami WordPress
+
+Pierwszy ekran BeardedWolf Admin pokazuje kafelki wszystkich zinwentaryzowanych domen: status WWW/HTTP, czas otrzymania nagłówków, TLS i termin certyfikatu, datę sprawdzenia oraz informację o dostępnych aktualizacjach WordPress (jeśli były sprawdzane). Odświeżanie publiczne wykonywane jest tylko dla domen z potwierdzonym zakresem testów. Brak badania jest widoczny jako **NIE SPRAWDZONO**, nie jako „OK”. Widok ma filtrowanie po grupach i przycisk **Szczegóły** kierujący do strony w rejestrze.
+
+Dla serwisów WordPress przycisk **Aktualizacje WP** pozwala sprawdzić przez SSH zdalnym WP-CLI dostępną wersję Core i liczbę aktualizacji wtyczek, a następnie **ręcznie zaktualizować zaznaczone wtyczki lub Core**. Nie ma automatycznego instalowania aktualizacji na otwarciu programu. Zapisy na serwerze wymagają autoryzacji, prawidłowej ścieżki WordPress, działającego profilu SSH, aktualnej kopii plików i bazy oraz podwójnego potwierdzenia. Aktualizacja Core obejmuje także `wp core update-db`. Każda operacja jest odnotowywana lokalnie bez poświadczeń. Instrukcja i ograniczenia: [docs/flota-serwisow.md](docs/flota-serwisow.md).
+
+Repozytorium zawiera odtwarzalne testy offline i zadanie GitHub Actions: `python3 -m unittest discover -s tests -v`.

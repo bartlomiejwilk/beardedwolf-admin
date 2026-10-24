@@ -9,6 +9,7 @@ import importlib.util
 from importlib.machinery import SourceFileLoader
 import json
 import os
+import shutil
 from pathlib import Path
 from pathlib import PurePosixPath
 import bw_servers
@@ -57,6 +58,12 @@ def atomic_json(path, value):
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     if path.is_symlink():
         raise RuntimeError(f"Nie zapisuję do dowiązania symbolicznego: {path}")
+    if path == SITES_FILE and path.is_file():
+        backup = path.with_name("sites.json.previous.bak")
+        if backup.is_symlink():
+            raise RuntimeError("Kopia rejestru serwisów jest dowiązaniem symbolicznym")
+        shutil.copy2(path, backup)
+        backup.chmod(0o600)
     fd, tmp = tempfile.mkstemp(prefix=".bw-", dir=path.parent)
     try:
         os.fchmod(fd, 0o600)

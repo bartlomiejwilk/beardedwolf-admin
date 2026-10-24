@@ -91,10 +91,11 @@ class AdminApp:
         holder = ttk.Frame(tab)
         holder.pack(fill="both", expand=True)
         self.site_list = ttk.Treeview(holder, show="headings", selectmode="browse",
-                                      columns=("domain", "group", "type", "authorized"), height=13)
+                                      columns=("domain", "group", "type", "authorized", "last"), height=13)
         for col, label, width in [
             ("domain", "Domena", 250), ("group", "Grupa", 110),
-            ("type", "Platforma", 125), ("authorized", "Zakres", 120)
+            ("type", "Platforma", 105), ("authorized", "Zakres", 115),
+            ("last", "Ostatnia kontrola", 135)
         ]:
             self.site_list.heading(col, text=label)
             self.site_list.column(col, width=width, stretch=col == "domain")
@@ -139,9 +140,14 @@ class AdminApp:
             for item in self.site_list.get_children():
                 self.site_list.delete(item)
             for index, site in enumerate(self.managed_sites):
+                try:
+                    last = bw_fleet.latest_report(site["domain"])["state"]
+                except (OSError, ValueError, KeyError, TypeError):
+                    last = "NIEBADANY"
                 self.site_list.insert("", "end", iid=str(index), values=(
                     site["domain"], site["group"], site["type"],
-                    "POTWIERDZONY" if site.get("authorized") else "DO POTWIERDZENIA"
+                    "POTWIERDZONY" if site.get("authorized") else "DO POTWIERDZENIA",
+                    last
                 ))
                 if site["domain"] == selected_domain:
                     self.site_list.selection_set(str(index))
@@ -497,6 +503,7 @@ class AdminApp:
                     messagebox.showinfo("Test SSH", event[1], parent=self.root)
                 elif event[0] == "fleet_done":
                     results = event[1]
+                    self.refresh_fleet()
                     alerts = [r for r in results if r[1] not in ("BEZ_ZMIAN", "BRAK_BASELINE")]
                     self.fleet_running = False
                     self.fleet_scan_button.configure(state="normal")

@@ -1,0 +1,12 @@
+# BeardedWolf Admin: narzedzia do WordPress i diagnostyki WWW
+# Kazda linia: jedna nazwa pakietu z repozytorium Kali.
+php-cli
+php-curl
+php-xml
+php-mbstring
+php-zip
+php-mysql
+composer
+mariadb-client
+openssl
+libxml2-utils

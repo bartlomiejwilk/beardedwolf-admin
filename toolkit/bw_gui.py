@@ -194,6 +194,9 @@ class AdminApp:
             ttk.Button(buttons, text="Szczegóły",
                        command=lambda d=domain: self.open_site_details(d)).pack(
                 side="left", padx=(0, 5))
+            ttk.Button(buttons, text="Otwórz WWW",
+                       command=lambda d=domain: self.open_site_website(d)).pack(
+                side="left", padx=(0, 5))
             if site.get("type") == "wordpress":
                 ttk.Button(
                     buttons, text="Aktualizacje WP",
@@ -270,6 +273,16 @@ class AdminApp:
                               "checked_at": "", "error": str(exc)[:150]}
                 self.messages.put(("dashboard_site", domain, result))
         self.messages.put(("dashboard_finished", len(sites)))
+
+    def open_site_website(self, domain):
+        verified = bw_fleet.base.domain_name(domain)
+        try:
+            subprocess.Popen(
+                ["xdg-open", "https://" + verified + "/"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+        except OSError as exc:
+            messagebox.showerror("Nie otwarto strony", str(exc), parent=self.root)
 
     def open_site_details(self, domain):
         for iid in self.site_list.get_children():
@@ -1389,10 +1402,20 @@ class AdminApp:
                     self.paint_dashboard_card(domain)
                 elif event[0] == "dashboard_finished":
                     self.dashboard_running = False
+                    current = [self.dashboard_results.get(s["domain"])
+                               for s in bw_fleet.inventory()["sites"]
+                               if s.get("authorized") and s.get("public_checks")]
+                    ok = sum(1 for item in current if item and
+                             item.get("status") in ("DOSTĘPNA", "PRZEKIEROWANIE") and
+                             item.get("tls") == "WAŻNY")
+                    problems = sum(1 for item in current if item and
+                                   (item.get("status") not in ("DOSTĘPNA", "PRZEKIEROWANIE")
+                                    or item.get("tls") != "WAŻNY"))
                     self.dashboard_hint.set(
-                        f"Sprawdzono {event[1]} serwisów. "
-                        "HTTP i TLS to nie pełny audyt bezpieczeństwa. "
-                        "WordPress sprawdzaj osobno przez SSH."
+                        f"Sprawdzono {event[1]} domen. WWW/TLS bez uwag: {ok}; "
+                        f"wymaga sprawdzenia: {problems}. "
+                        "Nie zastępuje audytu bezpieczeństwa. "
+                        "Aktualizacje WordPress sprawdzaj osobno przez SSH."
                     )
                 elif event[0] == "fleet_done":
                     results = event[1]

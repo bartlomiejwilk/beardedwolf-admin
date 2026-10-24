@@ -15,7 +15,7 @@ bash install/setup-toolkit.sh
 ~/.local/bin/bw doctor
 ```
 
-Instalator tworzy dowiązanie `~/.local/bin/bw` do pliku w repozytorium. Nie nadpisuje innego istniejącego polecenia `bw`. Jeżeli `~/.local/bin` jest w `PATH`, można używać po prostu `bw`.
+Instalator tworzy lokalny skrypt uruchamiający `~/.local/bin/bw`, który wywołuje moduł Python z repozytorium, ale **nie zmienia jego uprawnień w Git**. Wcześniej instalator tworzył dowiązanie symboliczne i zmieniał uprawnienia `toolkit/bw`, co mogło blokować `git pull`. Aktualny instalator bezpiecznie zastępuje jedynie własne stare dowiązanie; nie nadpisuje innych istniejących programów `bw`. Jeżeli `~/.local/bin` jest w `PATH`, można używać po prostu `bw`.
 
 ## Polecenia
 

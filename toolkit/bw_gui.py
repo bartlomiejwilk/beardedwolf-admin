@@ -65,12 +65,15 @@ class AdminApp:
         tests = ttk.Frame(tabs, padding=14)
         servers = ttk.Frame(tabs, padding=14)
         fleet = ttk.Frame(tabs, padding=14)
+        controls = ttk.Frame(tabs, padding=14)
         reports = ttk.Frame(tabs, padding=14)
         tabs.add(fleet, text="  Wszystkie serwisy  ")
         tabs.add(tests, text="  Testy domen  ")
         tabs.add(servers, text="  Serwery SSH  ")
+        tabs.add(controls, text="  Kontrole T01–T40  ")
         tabs.add(reports, text="  Raporty i informacje  ")
         self.build_fleet(fleet)
+        self.build_controls(controls)
         self.build_tests(tests)
         self.build_servers(servers)
         self.build_reports(reports)
@@ -427,6 +430,33 @@ class AdminApp:
             "Przy pierwszym połączeniu potwierdź odcisk klucza hosta niezależnym kanałem. "
             "Kolejne połączenia używają agenta SSH (keychain)."),
             wraplength=790, justify="left").pack(fill="x", anchor="w", pady=(9, 0))
+
+    def build_controls(self, tab):
+        ttk.Label(tab, text="Katalog 40 kontroli bezpieczeństwa",
+                  font=("Sans", 12, "bold")).pack(anchor="w", pady=(0, 9))
+        ttk.Label(tab, text="Wykonane są tylko podstawowe odczyty publiczne. "
+                  "Kontrole wymagające SSH, WordPressa, logów i bazy danych "
+                  "pozostają oznaczone jako planowane. Brak wyniku nie oznacza OK.",
+                  wraplength=790).pack(anchor="w", pady=(0, 10))
+        holder = ttk.Frame(tab)
+        holder.pack(fill="both", expand=True)
+        tree = ttk.Treeview(holder, columns=("id", "name", "access", "status"),
+                            show="headings", height=19)
+        for col, label, width in [
+            ("id", "ID", 55), ("name", "Kontrola", 360),
+            ("access", "Dostęp", 100), ("status", "Stan", 155)
+        ]:
+            tree.heading(col, text=label)
+            tree.column(col, width=width, stretch=col == "name")
+        for check in bw_fleet.catalog():
+            state = ("PUBLICZNY PODSTAWOWY" if check["status"] ==
+                     "implemented_public_basic" else "PLANOWANY")
+            tree.insert("", "end", values=(check["id"], check["name"],
+                                             check["access"], state))
+        scroll = ttk.Scrollbar(holder, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=scroll.set)
+        tree.pack(side="left", fill="both", expand=True)
+        scroll.pack(side="right", fill="y")
 
     def build_reports(self, tab):
         ttk.Label(tab, text="Raporty i bezpieczeństwo",

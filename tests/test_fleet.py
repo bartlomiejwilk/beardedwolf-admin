@@ -69,6 +69,23 @@ class FleetTests(unittest.TestCase):
             self.assertEqual(second["host_checks_state"],
                              "NOT_RUN_NO_AUTHENTICATED_SESSION")
 
+    def test_inventory_crud_keeps_reports(self):
+        fleet.add_site("new.example.org", "jdk", "sprawdzic")
+        self.assertEqual(fleet.get_site("new.example.org")["type"], "sprawdzic")
+        fleet.update_site("new.example.org", "um", "wordpress")
+        self.assertEqual(fleet.get_site("new.example.org")["group"], "um")
+        fleet.remove_site("new.example.org")
+        with self.assertRaises(ValueError):
+            fleet.get_site("new.example.org")
+
+    def test_duplicate_domain_rejected(self):
+        with self.assertRaises(ValueError):
+            fleet.add_site("example.org", "prywatne", "wordpress")
+
+    def test_invalid_platform_rejected(self):
+        with self.assertRaises(ValueError):
+            fleet.add_site("new.example.org", "prywatne", "php -r evil")
+
     def test_deny_non_inventory_domain(self):
         with self.assertRaisesRegex(ValueError, "Brak domeny"):
             fleet.get_site("unknown.example.org")

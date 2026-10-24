@@ -33,6 +33,8 @@ class AdminApp:
         self.managed_sites = []
         self.fleet_running = False
         self.last_fleet_report = None
+        self.table_sort = {}
+        self.table_headings = {}
         self.editing_alias = None
         self.running = False
 
@@ -82,6 +84,46 @@ class AdminApp:
         ttk.Label(frame, textvariable=self.status, wraplength=820).pack(
             anchor="w", fill="x")
 
+    def sort_table(self, tree, column):
+        """Sortuj widok bez zmiany powiązań identyfikatorów i danych."""
+        key = str(tree)
+        state = self.table_sort.get(key)
+        desc = bool(state and state[0] == column and not state[1])
+        self.apply_table_sort(tree, column, desc)
+
+    def apply_table_sort(self, tree, column, descending):
+        ids = list(tree.get_children(""))
+        def get_value(iid):
+            value = str(tree.set(iid, column))
+            if column == "port":
+                try:
+                    return int(value)
+                except ValueError:
+                    return -1
+            if column == "id" and value.startswith("T") and value[1:].isdigit():
+                return int(value[1:])
+            return value.casefold()
+        ordered = sorted(ids, key=get_value, reverse=descending)
+        for index, iid in enumerate(ordered):
+            tree.move(iid, "", index)
+        name = str(tree)
+        previous = self.table_sort.get(name)
+        if previous:
+            original = self.table_headings.get(name, {}).get(previous[0])
+            if original:
+                tree.heading(previous[0], text=original)
+        base_label = self.table_headings.get(name, {}).get(column, column)
+        tree.heading(column, text=base_label + (" ↓" if descending else " ↑"))
+        self.table_sort[name] = (column, descending)
+
+    def enable_table_sort(self, tree):
+        name = str(tree)
+        self.table_headings[name] = {}
+        for column in tree["columns"]:
+            label = tree.heading(column)["text"]
+            self.table_headings[name][column] = label
+            tree.heading(column, command=lambda col=column, obj=tree: self.sort_table(obj, col))
+
     def build_fleet(self, tab):
         ttk.Label(tab, text="Zarządzane serwisy i audyty", font=("Sans", 12, "bold")).pack(
             anchor="w", pady=(0, 7))
@@ -94,17 +136,18 @@ class AdminApp:
         holder = ttk.Frame(tab)
         holder.pack(fill="both", expand=True)
         self.site_list = ttk.Treeview(holder, show="headings", selectmode="browse",
-                                      columns=("domain", "group", "type", "authorized", "last"), height=13)
+                                      columns=("domain", "group", "type", "ssh", "authorized", "last"), height=11)
         for col, label, width in [
-            ("domain", "Domena", 250), ("group", "Grupa", 110),
-            ("type", "Platforma", 105), ("authorized", "Zakres", 115),
-            ("last", "Ostatnia kontrola", 135)
+            ("domain", "Domena", 195), ("group", "Grupa", 95),
+            ("type", "Platforma", 92), ("ssh", "Profil SSH", 95),
+            ("authorized", "Zakres", 125), ("last", "Ostatnia kontrola", 128)
         ]:
             self.site_list.heading(col, text=label)
             self.site_list.column(col, width=width, stretch=col == "domain")
         scrollbar = ttk.Scrollbar(holder, orient="vertical", command=self.site_list.yview)
         self.site_list.configure(yscrollcommand=scrollbar.set)
         self.site_list.pack(side="left", fill="both", expand=True)
+        self.enable_table_sort(self.site_list)
         self.site_list.bind("<Double-1>", lambda _evt: self.edit_site())
         scrollbar.pack(side="right", fill="y")
         manage = ttk.Frame(tab)
@@ -112,6 +155,12 @@ class AdminApp:
         ttk.Button(manage, text="Dodaj serwis", command=self.add_site).pack(side="left", padx=(0, 6))
         ttk.Button(manage, text="Edytuj serwis", command=self.edit_site).pack(side="left", padx=(0, 6))
         ttk.Button(manage, text="Usuń z rejestru", command=self.remove_site).pack(side="left", padx=(0, 6))
+        ssh_row = ttk.Frame(tab)
+        ssh_row.pack(anchor="w", fill="x", pady=(5, 0))
+        ttk.Button(ssh_row, text="Przypisz SSH / katalog", command=self.map_site_ssh).pack(side="left", padx=(0, 6))
+        ttk.Button(ssh_row, text="Sugerowane powiązania OVH", command=self.apply_known_ssh).pack(
+            side="left", padx=(0, 6))
+        ttk.Button(ssh_row, text="Połącz z SSH strony", command=self.open_mapped_ssh).pack(side="left")
         line1 = ttk.Frame(tab)
         line1.pack(anchor="w", fill="x", pady=(10, 4))
         ttk.Button(line1, text="Potwierdź zakres", command=self.confirm_site).pack(side="left", padx=(0, 6))
@@ -148,12 +197,15 @@ class AdminApp:
                 except (OSError, ValueError, KeyError, TypeError):
                     last = "NIEBADANY"
                 self.site_list.insert("", "end", iid=str(index), values=(
-                    site["domain"], site["group"], site["type"],
+                    site["domain"], site["group"], site["type"], site.get("ssh_alias") or "BRAK",
                     "POTWIERDZONY" if site.get("authorized") else "DO POTWIERDZENIA",
                     last
                 ))
                 if site["domain"] == selected_domain:
                     self.site_list.selection_set(str(index))
+            sort = self.table_sort.get(str(self.site_list))
+            if sort:
+                self.apply_table_sort(self.site_list, *sort)
         except Exception as exc:
             messagebox.showerror("Rejestr serwisów", str(exc), parent=self.root)
 
@@ -227,6 +279,119 @@ class AdminApp:
             self.status.set("Usunięto serwis z rejestru: " + site["domain"])
         except Exception as exc:
             messagebox.showerror("Nie usunięto", str(exc), parent=self.root)
+
+    def map_site_ssh(self):
+        site = self.selected_site()
+        if site is None:
+            return
+        try:
+            available = bw_servers.load_profiles()
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Profile SSH", str(exc), parent=self.root)
+            return
+        aliases = ["(brak)"] + sorted(p["alias"] for p in available)
+        current = site.get("ssh_alias")
+        if current and current not in aliases:
+            aliases.append(current)
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Połącz serwis z SSH: " + site["domain"])
+        dialog.geometry("615x295")
+        dialog.resizable(True, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+        frame = ttk.Frame(dialog, padding=16)
+        frame.pack(fill="both", expand=True)
+        ttk.Label(frame, text="Domena: " + site["domain"],
+                  font=("Sans", 11, "bold")).pack(anchor="w", pady=(0, 12))
+        ttk.Label(frame, text="Zapisany profil SSH na tym komputerze:").pack(anchor="w")
+        selected = tk.StringVar(value=current or "(brak)")
+        combo = ttk.Combobox(frame, textvariable=selected, values=aliases, state="readonly")
+        combo.pack(fill="x", pady=(3, 12))
+        ttk.Label(frame, text="Katalog WordPress na serwerze (opcjonalny):").pack(anchor="w")
+        root_var = tk.StringVar(value=site.get("wp_root") or "")
+        ttk.Entry(frame, textvariable=root_var).pack(fill="x", pady=(3, 8))
+        ttk.Label(frame, text="Przykład: /home/jaslo/beardedwolf. Katalog musi zostać "
+                  "zweryfikowany na właściwym serwerze. Sam zapis nie uruchamia SSH.",
+                  wraplength=565).pack(anchor="w")
+        buttons = ttk.Frame(frame)
+        buttons.pack(anchor="e", pady=(16, 0))
+        def save():
+            chosen = selected.get()
+            try:
+                bw_fleet.assign_ssh(
+                    site["domain"], None if chosen == "(brak)" else chosen,
+                    root_var.get()
+                )
+                dialog.destroy()
+                self.refresh_fleet()
+                self.status.set(f"Przypisano SSH do {site['domain']}: "
+                                f"{chosen}. Nie wykonywano połączenia.")
+            except (OSError, RuntimeError, ValueError) as exc:
+                messagebox.showerror("Nie zapisano powiązania", str(exc), parent=dialog)
+        ttk.Button(buttons, text="Zapisz powiązanie", command=save).pack(side="left", padx=(0, 8))
+        ttk.Button(buttons, text="Anuluj", command=dialog.destroy).pack(side="left")
+        dialog.bind("<Escape>", lambda _evt: dialog.destroy())
+        combo.focus_set()
+        dialog.wait_window()
+
+    def apply_known_ssh(self):
+        try:
+            preview = bw_fleet.suggestion_preview()
+        except (OSError, RuntimeError, ValueError) as exc:
+            messagebox.showerror("Sugerowane powiązania", str(exc), parent=self.root)
+            return
+        if not preview:
+            messagebox.showinfo(
+                "Brak nowych podpowiedzi",
+                "Brak nieprzypisanych serwisów z potwierdzonym profilem SSH. "
+                "Sprawdź, czy istnieją profile jaslo i jdk.",
+                parent=self.root
+            )
+            return
+        details = "\n".join(f"• {domain} → {alias}" for domain, alias in preview)
+        if not messagebox.askyesno(
+            "Zastosować powiązania OVH?",
+            "Przypisać wskazane profile do serwisów?\n\n" + details +
+            "\n\nIstniejące powiązania zostaną zachowane, a katalogi instalacji "
+            "pozostaną puste. Nie zostanie wykonane żadne SSH ani skan.",
+            parent=self.root
+        ):
+            return
+        try:
+            applied = bw_fleet.apply_suggestions()
+            self.refresh_fleet()
+            self.status.set(f"Zapisano {len(applied)} sugerowanych powiązań SSH.")
+        except (OSError, RuntimeError, ValueError) as exc:
+            messagebox.showerror("Błąd przypisywania SSH", str(exc), parent=self.root)
+
+    def open_mapped_ssh(self):
+        site = self.selected_site()
+        if site is None:
+            return
+        alias = site.get("ssh_alias")
+        if not alias:
+            messagebox.showwarning("Brak powiązania", "Przypisz najpierw profil SSH do serwisu.",
+                                   parent=self.root)
+            return
+        profiles = {p["alias"]: p for p in bw_servers.load_profiles()}
+        profile = profiles.get(alias)
+        if profile is None:
+            messagebox.showerror("Nieaktywny alias SSH",
+                                 f"Nie znaleziono profilu {alias}. Popraw powiązanie.",
+                                 parent=self.root)
+            return
+        if not messagebox.askyesno(
+            "Połączenie SSH",
+            f"Otworzyć sesję do profilu {alias} ({profile['user']}@{profile['host']})? "
+            "Samo połączenie nie uruchamia testów hostowych.",
+            parent=self.root
+        ):
+            return
+        try:
+            bw_servers.connect(profile)
+            self.status.set("Otwieram SSH: " + alias + " dla " + site["domain"])
+        except (OSError, RuntimeError, ValueError) as exc:
+            messagebox.showerror("Nie udało się połączyć", str(exc), parent=self.root)
 
     def confirm_site(self):
         site = self.selected_site()
@@ -390,6 +555,7 @@ class AdminApp:
             self.server_list.heading(col, text=name)
             self.server_list.column(col, width=width, stretch=col == "host")
         self.server_list.pack(fill="x")
+        self.enable_table_sort(self.server_list)
         self.server_list.bind("<<TreeviewSelect>>", self.on_server_select)
 
         fields = ttk.LabelFrame(tab, text="Dodaj lub edytuj połączenie SSH", padding=12)
@@ -448,6 +614,7 @@ class AdminApp:
         ]:
             tree.heading(col, text=label)
             tree.column(col, width=width, stretch=col == "name")
+        self.enable_table_sort(tree)
         for check in bw_fleet.catalog():
             state = ("PUBLICZNY PODSTAWOWY" if check["status"] ==
                      "implemented_public_basic" else "PLANOWANY")

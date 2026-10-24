@@ -89,8 +89,8 @@ def make_ssh_config(profiles):
             "",
         ])
     blocks.append(END)
-    # Preserve preexisting user-defined configuration outside our block.
-    return base.rstrip("\n") + ("\n\n" if base.strip() else "") + "\n".join(blocks) + "\n"
+    # SSH uses the first matching value. Put specific aliases BEFORE user Host * defaults.
+    return "\n".join(blocks) + "\n\n" + base.lstrip("\n")
 
 
 def add_profile(alias, host, user, port):
@@ -100,6 +100,13 @@ def add_profile(alias, host, user, port):
         raise ValueError("Alias jest już skonfigurowany. Wybierz inną nazwę.")
     new_profiles = profiles + [profile]
     config = make_ssh_config(new_profiles)
+    if SSH_CONFIG.is_symlink() or PROFILE_FILE.is_symlink():
+        raise ValueError("Pliki konfiguracyjne są dowiązaniami symbolicznymi; wymagana ręczna kontrola.")
+    if SSH_CONFIG.exists():
+        backup = SSH_DIR / "config.beardedwolf.original.bak"
+        if not backup.exists():
+            shutil.copy2(SSH_CONFIG, backup)
+            backup.chmod(0o600)
     atomic_save(SSH_CONFIG, config)
     atomic_save(PROFILE_FILE, json.dumps(new_profiles, ensure_ascii=False, indent=2) + "\n")
     return profile

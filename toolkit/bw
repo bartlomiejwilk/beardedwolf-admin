@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+"""BeardedWolf Admin: nieinwazyjne kontrole DNS i TLS z raportem HTML."""
+import argparse
+from datetime import datetime
+from html import escape
+from pathlib import Path
+import re
+import shutil
+import socket
+import ssl
+import subprocess
+import sys
+
+
+def domain_name(value):
+    try:
+        name = value.rstrip('.').lower().encode('idna').decode('ascii')
+    except UnicodeError as exc:
+        raise argparse.ArgumentTypeError('Nieprawidłowa nazwa domeny') from exc
+    labels = name.split('.')
+    if (len(name) > 253 or len(labels) < 2 or any(not re.fullmatch(
+        r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?', label
+    ) for label in labels)):
+        raise argparse.ArgumentTypeError('Podaj nazwę domeny, np. example.org')
+    return name
+
+
+def sync_root():
+    if not shutil.which('powershell.exe') or not shutil.which('wslpath'):
+        raise RuntimeError('Eksport do Syncthing wymaga WSL z powershell.exe i wslpath')
+    proc = subprocess.run(
+        ['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', '$env:USERPROFILE'],
+        capture_output=True, text=True, timeout=15, check=True
+    )
+    win_profile = proc.stdout.strip()
+    if not win_profile:
+        raise RuntimeError('Nie udało się ustalić profilu Windows')
+    proc = subprocess.run(['wslpath', '-u', win_profile],
+                          capture_output=True, text=True, timeout=10, check=True)
+    root = Path(proc.stdout.strip()) / 'BeardedWolf' / 'Sync'
+    if not root.is_dir():
+        raise RuntimeError(f'Folder Syncthing nie istnieje: {root}')
+    return root
+
+
+def report_sections(kind, domain):
+    sections = []
+    failed = False
+    if kind == 'DNS':
+        if not shutil.which('dig'):
+            raise RuntimeError('Brakuje programu dig (pakiet bind9-dnsutils)')
+        for title, query_name, record in [
+            ('Adresy IPv4 (A)', domain, 'A'),
+            ('Adresy IPv6 (AAAA)', domain, 'AAAA'),
+            ('Serwery pocztowe (MX)', domain, 'MX'),
+            ('Serwery nazw (NS)', domain, 'NS'),
+            ('SPF (rekord TXT)', domain, 'TXT'),
+            ('DMARC (rekord TXT)', '_dmarc.' + domain, 'TXT'),
+        ]:
+            try:
+                proc = subprocess.run(
+                    ['dig', '+time=3', '+tries=1', '+short', query_name, record],
+                    capture_output=True, text=True, timeout=7
+                )
+                if proc.returncode:
+                    value = f'Błąd dig: {proc.stderr.strip() or proc.returncode}'
+                    failed = True
+                else:
+                    rows = proc.stdout.splitlines()
+                    if title.startswith('SPF'):
+                        rows = [row for row in rows if 'v=spf1' in row.lower()]
+                    value = '\n'.join(rows) if rows else 'Brak rekordu w odpowiedzi DNS'
+                sections.append((title, value))
+            except subprocess.TimeoutExpired:
+                sections.append((title, 'Przekroczono czas odpowiedzi DNS'))
+                failed = True
+    else:
+        try:
+            context = ssl.create_default_context()
+            with socket.create_connection((domain, 443), timeout=8) as raw:
+                with context.wrap_socket(raw, server_hostname=domain) as conn:
+                    cert = conn.getpeercert()
+                    sections.extend([
+                        ('Weryfikacja certyfikatu', 'Poprawna (systemowe zaufane CA)'),
+                        ('Wersja TLS', conn.version() or 'Nieznana'),
+                        ('Szyfr', (conn.cipher() or ['Nieznany'])[0]),
+                        ('Ważny do', cert.get('notAfter', 'Brak informacji')),
+                        ('Nazwy DNS w certyfikacie', ', '.join(
+                            str(x[1]) for x in cert.get('subjectAltName', [])
+                            if x[0] == 'DNS'
+                        ) or 'Brak'),
+                    ])
+        except (OSError, ssl.SSLError) as exc:
+            failed = True
+            sections.append(('Połączenie TLS / certyfikat', f'Niepowodzenie: {exc}'))
+    return sections, failed
+
+
+def save_report(kind, domain, sections, use_sync):
+    base = sync_root() if use_sync else Path.home() / 'beardedwolf' / 'raporty'
+    directory = base / 'Raporty' / kind if use_sync else base / kind
+    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    timestamp = datetime.now().astimezone()
+    filename = f'{domain}_{timestamp.strftime("%Y%m%d_%H%M%S_%f")}.html'
+    path = directory / filename
+    items = '\n'.join(
+        f'<section><h2>{escape(title)}</h2><pre>{escape(value)}</pre></section>'
+        for title, value in sections
+    )
+    title = f'BeardedWolf: {kind} - {domain}'
+    html = f'''<!doctype html>
+<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{escape(title)}</title>
+<style>body{{font:1rem/1.6 system-ui,sans-serif;max-width:75ch;margin:2rem auto;padding:0 1rem;color:#171717;background:#fff}}
+pre{{white-space:pre-wrap;overflow-wrap:anywhere;background:#f3f4f6;padding:1rem;border-radius:.35rem}}
+h1,h2{{line-height:1.3}}section{{margin-top:1.5rem}}</style></head>
+<body><main><h1>{escape(title)}</h1>
+<p>Data wygenerowania: <time datetime="{timestamp.isoformat()}">{escape(timestamp.strftime('%Y-%m-%d %H:%M:%S %Z'))}</time></p>
+{items}
+<p><small>Jednorazowa diagnostyka pasywna. Wynik nie stanowi pełnego audytu bezpieczeństwa.</small></p>
+</main></body></html>\n'''
+    with path.open('x', encoding='utf-8') as f:
+        f.write(html)
+    if not use_sync:
+        path.chmod(0o600)
+    return path
+
+
+def doctor():
+    print('BeardedWolf Admin, kontrola narzędzi:')
+    for item in ['python3', 'dig', 'openssl', 'git', 'gh', 'ssh', 'curl', 'wp']:
+        path = shutil.which(item)
+        if item == 'wp' and not path:
+            local = Path.home() / '.local' / 'bin' / 'wp'
+            path = str(local) if local.is_file() else None
+        print(f'  {item}: {path or "BRAK"}')
+    try:
+        print('  Syncthing:', sync_root())
+    except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
+        print('  Syncthing: niedostępny -', exc)
+
+
+def main():
+    parser = argparse.ArgumentParser(prog='bw', description='BeardedWolf Admin: diagnostyka i raporty HTML')
+    commands = parser.add_subparsers(dest='command', required=True)
+    commands.add_parser('doctor', help='Sprawdź narzędzia i dostępność katalogu raportów')
+    for command in ['dns', 'tls']:
+        p = commands.add_parser(command, help=f'Wykonaj odczytową kontrolę {command.upper()} i zapisz HTML')
+        p.add_argument('domain', type=domain_name)
+        p.add_argument('--sync', action='store_true', help='Zapisz raport w folderze Syncthing (świadomy eksport)')
+    args = parser.parse_args()
+    if args.command == 'doctor':
+        doctor()
+        return 0
+    kind = args.command.upper()
+    try:
+        sections, failed = report_sections(kind, args.domain)
+        path = save_report(kind, args.domain, sections, args.sync)
+    except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
+        print(f'Błąd: {exc}', file=sys.stderr)
+        return 2
+    print(f'Raport {kind}: {path}')
+    if failed:
+        print('Uwaga: diagnostyka zgłosiła problem; sprawdź treść raportu.', file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "note": "Dane hostingowe potwierdzone w rozmowie 2026-10-24. FTP nie oznacza SSH; loginy i hasla nie sa automatycznie kopiowane do repozytorium.",
+  "sites": {
+    "jaslopttk.pl": {
+      "provider": "OVHcloud",
+      "access": "ssh",
+      "host": "ssh.cluster128.hosting.ovh.net",
+      "port": 22
+    },
+    "um.jaslo.pl": {
+      "provider": "nazwa.pl",
+      "access": "unknown",
+      "host": null,
+      "port": null
+    },
+    "jasloiregion.pl": {
+      "provider": "cyber_Folks",
+      "access": "unknown",
+      "host": null,
+      "port": null
+    },
+    "nzozmedykjaslo.pl": {
+      "provider": "OVHcloud",
+      "access": "ftp",
+      "host": "ftp.cluster130.hosting.ovh.net",
+      "port": 21
+    },
+    "parkowajaslo.pl": {
+      "provider": "OVHcloud",
+      "access": "ftp",
+      "host": "ftp.cluster130.hosting.ovh.net",
+      "port": 21
+    },
+    "beardedwolf.pl": {
+      "provider": "OVHcloud",
+      "access": "ssh",
+      "host": "ssh.cluster114.hosting.ovh.net",
+      "port": 22
+    },
+    "art.beardedwolf.pl": {
+      "provider": "OVHcloud",
+      "access": "ssh",
+      "host": "ssh.cluster114.hosting.ovh.net",
+      "port": 22
+    },
+    "labdostepnosci.pl": {
+      "provider": "OVHcloud",
+      "access": "ssh",
+      "host": "ssh.cluster114.hosting.ovh.net",
+      "port": 22
+    },
+    "szeptogra.pl": {
+      "provider": "OVHcloud",
+      "access": "ssh",
+      "host": "ssh.cluster114.hosting.ovh.net",
+      "port": 22
+    },
+    "jdkjaslo.pl": {
+      "provider": "OVHcloud",
+      "access": "ssh",
+      "host": "ssh.cluster126.hosting.ovh.net",
+      "port": 22
+    },
+    "kino.jdkjaslo.pl": {
+      "provider": "OVHcloud",
+      "access": "ssh",
+      "host": "ssh.cluster126.hosting.ovh.net",
+      "port": 22
+    }
+  }
+}

@@ -89,6 +89,35 @@ Interpretacja protokołu jest zachowawcza: **FTP** (w tym FileZilla z TLS opcjon
 
 Importer nie próbuje łączyć się z serwerami i nie automatyzuje transferów FTP. Nie przechowuje oryginalnego XML. Zakłada, że eksport jest kompletnym, poprawnym plikiem XML, nie fragmentem wklejonym do edytora; używa ograniczenia rozmiaru 5 MiB i odrzuca definicje DTD/ENTITY.
 
+## Pulpit startowy: stan serwisów i aktualizacje WordPress
+
+Pierwszą zakładką aplikacji jest teraz **Pulpit** z przewijaną siatką kafelków. Dla każdej domeny pokazuje:
+- **Dostępność WWW**: rozróżnia odpowiedź HTTP 2xx, przekierowania 3xx, ograniczenia 401/403, błędy 4xx, awarie 5xx i problemy połączenia.
+- **Czas otrzymania nagłówków** odpowiedzi HEAD w milisekundach, orientacyjny wskaźnik szybkości, **nie pomiar pełnego TTFB**.
+- **TLS**: poprawność weryfikowanego certyfikatu, termin ważności i ostrzeżenie o wygaśnięciu poniżej 14 dni.
+- **Czas ostatniej kontroli**: wyraźny znacznik UTC. Kafelek nie udaje, że jest aktualny, zanim pomiar się zakończy.
+- **WordPress**: po odrębnym sprawdzeniu przez SSH liczbę wtyczek do aktualizacji oraz dostępność aktualizacji Core. Wcześniej wyświetla „nie sprawdzono”.
+
+Pulpit sam rozpoczyna *jednorazowe* kontrole WWW/TLS po uruchomieniu programu, ale **wyłącznie dla serwisów z wcześniej potwierdzonym zakresem** i włączonymi testami publicznymi. Limit to cztery jednoczesne serwisy; każdy wykonuje pojedyncze żądanie HEAD HTTPS i osobne zestawienie certyfikatu. Ewentualne przekierowania są opisywane, ale nie podążamy po ich celach. „NIE SPRAWDZONO” oznacza brak wyniku, a nie bezpieczeństwo. Po wybraniu filtra grupy można zawęzić widok. Kliknięcie **Szczegóły** przechodzi do odpowiedniego serwisu na liście.
+
+Status WWW/TLS nie jest pełnym audytem i nie oznacza prawidłowej dostępności cyfrowej WCAG ani braku złośliwego kodu.
+
+### Sprawdzanie aktualizacji Core i wtyczek przez SSH
+
+W kafelku WordPress kliknij **Aktualizacje WP**. Operacja wymaga:
+1. platformy **wordpress**, potwierdzonych uprawnień do audytu;
+2. zweryfikowanego profilu SSH z **działającym kluczem**, znanego klucza hosta i dostępu z WSL;
+3. **bezwzględnej ścieżki katalogu WordPress** w profilu serwisu;
+4. programu \`wp\` (WP-CLI) **na zdalnym hostingu**, bo lokalna instalacja WP-CLI na Kali nie wystarczy.
+
+Przycisk **Sprawdź aktualizacje** uruchamia przez SSH komendy odczytowe \`wp core version\`, \`wp core check-update --format=json\` i \`wp plugin list --format=json\`. Wyniki aktualizacji są przechowywane tylko w pamięci aplikacji, nie uruchamiają instalacji i nie są dodawane do GitHuba.
+
+Po przeglądzie można zaznaczyć pojedyncze wtyczki i kliknąć **Aktualizuj zaznaczone wtyczki**, albo użyć **Aktualizuj WordPress Core**. Nie używamy \`--all\`, \`--force\` ani \`--insecure\`. Tuż przed instalacją program ponownie sprawdza wersję i dostępność wybranej aktualizacji, aby nie wykonać operacji ze starych danych.
+
+**Aktualizacja Core automatycznie uruchamia również \`wp core update-db\`**, czyli modyfikację bazy danych, jeżeli jest wymagana. Każda operacja wymaga dwóch oddzielnych potwierdzeń: oświadczenia o aktualnej, odtwarzalnej kopii **plików i bazy** oraz wpisania dokładnego adresu domeny. Program NIE tworzy kopii i nie potwierdza, że backup działa. Dla serwisów krytycznych (np. UM/JDK), multisite, niestandardowych środowisk i wtyczek premium należy sprawdzić zakres uprawnień, kompatybilność i możliwość przywrócenia danych; zalecany staging i okno serwisowe. Operacja może spowodować niedostępność strony, wymaga kontroli po aktualizacji.
+
+Na dysku lokalnym zapisuje się mały dziennik zmian (bez haseł) w \`~/beardedwolf/raporty/FLEET/<domena>/wp_change_*.json\`. Brak wyników odczytu SSH to **brak danych**, a nie „wszystko aktualne”. Jeśli brak \`wp\` po stronie serwera, moduł pokaże błąd i nie będzie instalował niczego samodzielnie.
+
 ## Jak uruchamiać
 
 Na komputerze z Kali WSL 2 i XFCE:

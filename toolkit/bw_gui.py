@@ -269,6 +269,175 @@ class AdminApp:
                 self.status.set("Wybrano serwis: " + domain)
                 return
 
+    def open_wp_dialog(self, domain):
+        existing = self.wp_dialogs.get(domain)
+        if existing and existing["window"].winfo_exists():
+            existing["window"].lift()
+            return
+        site = bw_fleet.get_site(domain)
+        dialog = tk.Toplevel(self.root)
+        dialog.title("WordPress: aktualizacje | " + domain)
+        dialog.geometry("930x600")
+        dialog.minsize(750, 490)
+        dialog.transient(self.root)
+        controls = ttk.Frame(dialog, padding=15)
+        controls.pack(fill="both", expand=True)
+        ttk.Label(controls, text="Aktualizacje WordPress: " + domain,
+                  font=("Sans", 13, "bold")).pack(anchor="w", pady=(0, 7))
+        route = ("Profil SSH: " + str(site.get("ssh_alias") or "BRAK") +
+                 "   |   Katalog: " + str(site.get("wp_root") or "BRAK"))
+        ttk.Label(controls, text=route, wraplength=880).pack(anchor="w")
+        ttk.Label(controls,
+                  text="Sprawdzenie: tylko odczyt WP-CLI przez SSH. Aktualizacje wymagają "
+                       "osobnego potwierdzenia, działającego backupu plików i bazy. "
+                       "Narzędzie nie tworzy automatycznie kopii i nie przywraca strony.",
+                  wraplength=880).pack(anchor="w", pady=(7, 9))
+        details = tk.StringVar(value="Core: nie sprawdzono")
+        ttk.Label(controls, textvariable=details,
+                  font=("Sans", 11, "bold")).pack(anchor="w", pady=(3, 6))
+        wrapper = ttk.Frame(controls)
+        wrapper.pack(fill="both", expand=True)
+        tree = ttk.Treeview(wrapper, show="headings", selectmode="extended",
+                            columns=("name", "version", "target", "state"))
+        for col, label, width in [
+            ("name", "Wtyczka", 300), ("version", "Aktualna", 115),
+            ("target", "Dostępna", 115), ("state", "Status", 160)
+        ]:
+            tree.heading(col, text=label)
+            tree.column(col, width=width, stretch=col == "name")
+        tree.pack(side="left", fill="both", expand=True)
+        vscroll = ttk.Scrollbar(wrapper, command=tree.yview, orient="vertical")
+        vscroll.pack(side="right", fill="y")
+        tree.configure(yscrollcommand=vscroll.set)
+        row = ttk.Frame(controls)
+        row.pack(fill="x", pady=(11, 5))
+        check_btn = ttk.Button(row, text="Sprawdź aktualizacje",
+                               command=lambda: self.check_wp_updates(domain))
+        check_btn.pack(side="left", padx=(0, 8))
+        plugin_btn = ttk.Button(
+            row, text="Aktualizuj zaznaczone wtyczki",
+            command=lambda: self.confirm_wp_action(domain, "plugins")
+        )
+        plugin_btn.pack(side="left", padx=(0, 8))
+        core_btn = ttk.Button(
+            row, text="Aktualizuj WordPress Core",
+            command=lambda: self.confirm_wp_action(domain, "core")
+        )
+        core_btn.pack(side="left")
+        state = tk.StringVar(value="Gotowe do sprawdzenia.")
+        ttk.Label(controls, textvariable=state, wraplength=880).pack(
+            fill="x", anchor="w", pady=(5, 0))
+        self.wp_dialogs[domain] = {
+            "window": dialog, "status": state, "details": details, "tree": tree,
+            "check": check_btn, "plugins": plugin_btn, "core": core_btn,
+            "data": None, "busy": False
+        }
+        plugin_btn.configure(state="disabled")
+        core_btn.configure(state="disabled")
+        def finish():
+            self.wp_dialogs.pop(domain, None)
+            dialog.destroy()
+        dialog.protocol("WM_DELETE_WINDOW", finish)
+        self.check_wp_updates(domain)
+
+    def wp_set_busy(self, domain, busy):
+        record = self.wp_dialogs.get(domain)
+        if not record:
+            return
+        record["busy"] = busy
+        record["check"].configure(state="disabled" if busy else "normal")
+        has_result = bool(record.get("data"))
+        has_plugins = bool(record["data"]["plugin_updates"]) if has_result else False
+        has_core = bool(record["data"]["core_targets"]) if has_result else False
+        record["plugins"].configure(
+            state="normal" if has_plugins and not busy else "disabled"
+        )
+        record["core"].configure(
+            state="normal" if has_core and not busy else "disabled"
+        )
+
+    def check_wp_updates(self, domain):
+        record = self.wp_dialogs.get(domain)
+        if not record or record["busy"]:
+            return
+        record["status"].set("Sprawdzam przez SSH. Brak zapisu na serwerze...")
+        self.wp_set_busy(domain, True)
+        threading.Thread(
+            target=self.wp_check_worker, args=(domain,), daemon=True
+        ).start()
+
+    def wp_check_worker(self, domain):
+        try:
+            result = bw_wp.list_updates(bw_fleet.get_site(domain))
+            self.messages.put(("wp_check_done", domain, result, None))
+        except Exception as exc:
+            self.messages.put(("wp_check_done", domain, None, str(exc)))
+
+    def confirm_wp_action(self, domain, kind):
+        record = self.wp_dialogs.get(domain)
+        if not record or record["busy"] or not record.get("data"):
+            return
+        report = record["data"]
+        chosen = []
+        if kind == "plugins":
+            for item in record["tree"].selection():
+                chosen.append(report["plugin_updates"][int(item)])
+            if not chosen:
+                messagebox.showwarning("Wybierz wtyczki",
+                                       "Zaznacz przynajmniej jedną wtyczkę na liście.",
+                                       parent=record["window"])
+                return
+            target = ", ".join(p["name"] + " (" + p["version"] + " → " +
+                               p["target"] + ")" for p in chosen)
+            label = "Aktualizacja wtyczek: " + target
+        else:
+            target = sorted(report["core_targets"],
+                            key=lambda v: tuple(int(x) for x in v.split(".")))[-1]
+            label = ("Aktualizacja WordPress Core: " +
+                     report["current_core"] + " → " + target)
+        if not messagebox.askyesno(
+            "Zmiana produkcyjnej strony WordPress",
+            label + "\n\nCzy potwierdzasz, że posiadasz aktualną, odtwarzalną "
+            "kopię BAZY DANYCH I PLIKÓW strony oraz możliwość jej przywrócenia? "
+            "BeardedWolf Admin NIE tworzy i NIE testuje kopii automatycznie. "
+            "Zmiana może spowodować niedostępność serwisu.",
+            parent=record["window"]
+        ):
+            return
+        typed = simpledialog.askstring(
+            "Ostateczne potwierdzenie aktualizacji",
+            "Aby wykonać zmianę na serwerze, wpisz dokładnie domenę:\n" + domain,
+            parent=record["window"]
+        )
+        if typed != domain:
+            record["status"].set("Anulowano: nie potwierdzono domeny.")
+            return
+        self.wp_set_busy(domain, True)
+        record["status"].set("Trwa aktualizacja na serwerze " + domain +
+                             ". Nie zamykaj panelu do otrzymania wyniku.")
+        threading.Thread(
+            target=self.wp_update_worker,
+            args=(domain, kind, chosen, report, target), daemon=True
+        ).start()
+
+    def wp_update_worker(self, domain, kind, chosen, report, target):
+        try:
+            site = bw_fleet.get_site(domain)
+            results = []
+            if kind == "plugins":
+                for entry in chosen:
+                    output = bw_wp.update_plugin(
+                        site, entry["name"], entry["version"], entry["target"]
+                    )
+                    results.append(entry["name"] + ": " + output[-240:])
+            else:
+                output = bw_wp.update_core(site, report["current_core"], target)
+                results.append("Core: " + output[-400:])
+            error = None
+        except Exception as exc:
+            error = str(exc)
+        self.messages.put(("wp_update_done", domain, kind, results, error))
+
     def sort_table(self, tree, column):
         """Sortuj widok bez zmiany powiązań identyfikatorów i danych."""
         key = str(tree)
@@ -1136,6 +1305,52 @@ class AdminApp:
                 elif event[0] == "connection":
                     self.status.set(event[1])
                     messagebox.showinfo("Test SSH", event[1], parent=self.root)
+                elif event[0] == "wp_check_done":
+                    _, domain, data, error = event
+                    record = self.wp_dialogs.get(domain)
+                    if record:
+                        if error:
+                            record["status"].set("Nie udało się sprawdzić: " + error)
+                            record["data"] = None
+                            record["details"].set("Core: status nieznany")
+                        else:
+                            self.wp_cache[domain] = data
+                            record["data"] = data
+                            record["details"].set(
+                                "Core: " + data["current_core"] +
+                                (" | dostępna aktualizacja: " + ", ".join(data["core_targets"])
+                                 if data["core_targets"] else " | aktualny") +
+                                " | aktualizacje wtyczek: " + str(data["plugin_count"])
+                            )
+                            for item in record["tree"].get_children():
+                                record["tree"].delete(item)
+                            for index, p in enumerate(data["plugin_updates"]):
+                                record["tree"].insert(
+                                    "", "end", iid=str(index),
+                                    values=(p["name"], p["version"], p["target"], p["status"])
+                                )
+                            record["status"].set(
+                                "Sprawdzono aktualizacje. Zaznacz wtyczki do instalacji "
+                                "albo wybierz aktualizację Core. Zmiany wymagają potwierdzenia."
+                            )
+                            self.paint_dashboard_card(domain)
+                        self.wp_set_busy(domain, False)
+                elif event[0] == "wp_update_done":
+                    _, domain, kind, results, error = event
+                    record = self.wp_dialogs.get(domain)
+                    if record:
+                        record["status"].set(
+                            ("BŁĄD: " + error if error else
+                             "Zakończono: " + " | ".join(results)) +
+                            (" | Sprawdź potrzebę migracji bazy wp core update-db "
+                             "oraz działanie strony i dziennik błędów."
+                             if kind == "core" and not error else "")
+                        )
+                        # Lista jest nieaktualna do czasu ponownego sprawdzenia.
+                        record["data"] = None
+                        self.wp_cache.pop(domain, None)
+                        self.paint_dashboard_card(domain)
+                        self.wp_set_busy(domain, False)
                 elif event[0] == "dashboard_site":
                     _, domain, data = event
                     self.dashboard_results[domain] = data

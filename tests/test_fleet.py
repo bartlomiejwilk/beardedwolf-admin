@@ -95,6 +95,7 @@ class FleetTests(unittest.TestCase):
             self.assertEqual(saved["ssh_alias"], "jaslo")
             self.assertEqual(saved["wp_root"], "/home/jaslo/beardedwolf")
             site = fleet.get_site("example.org")
+            self.assertTrue((self.settings / "sites.json.previous.bak").exists())
             self.assertTrue(site["authorized"])
             self.assertEqual(site["ssh_alias"], "jaslo")
             fleet.assign_ssh("example.org", None, "")

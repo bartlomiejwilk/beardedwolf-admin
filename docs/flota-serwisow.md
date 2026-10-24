@@ -49,6 +49,28 @@ Przycisk **Połącz z SSH strony** otwiera interaktywną sesję terminala dla pr
 
 Przy tej aktualizacji wprowadzono również **sortowanie tabel** w zakładkach Serwery SSH, Wszystkie serwisy oraz Kontrole T01–T40. Kliknięcie nagłówka sortuje rosnąco, kolejne malejąco, bez zmiany danych ani identyfikatorów przypisanych do wybranego wiersza.
 
+## Hosting i dostęp: SSH, FTP, SFTP
+
+Karta **Wszystkie serwisy** rozróżnia platformę serwisu (WordPress / aplikacja / przekierowanie / nieustalona) od **dostawcy hostingu**, **adresu serwera** i **potwierdzonego protokołu dostępu**. Pole `sprawdzic` z wcześniejszych wersji jest w tabeli wyświetlane jako „nieustalona”. Samo wskazanie dostawcy nie daje dostępu do plików.
+
+**Dane przekazane 24 października 2026 r.:**
+
+| Serwis | Dostawca | Protokół / host | Stan przypisania |
+|---|---|---|---|
+| `jaslopttk.pl` | OVHcloud | SSH: `ssh.cluster128.hosting.ovh.net`, port 22 | Brak potwierdzonego loginu SSH i lokalnego profilu |
+| `um.jaslo.pl` | nazwa.pl | Serwer i protokół nieustalone | Nie przypisujemy SSH |
+| `jasloiregion.pl` | cyber_Folks | Serwer i protokół nieustalone | Nie przypisujemy SSH |
+| `nzozmedykjaslo.pl` | OVHcloud | FTP: `ftp.cluster130.hosting.ovh.net`, port 21 | SSH niepotwierdzone |
+| `parkowajaslo.pl` | OVHcloud | FTP: `ftp.cluster130.hosting.ovh.net`, port 21 | SSH niepotwierdzone |
+
+Własne serwisy na cluster114 i serwisy JDK na cluster126 zachowują już istniejące propozycje profili `jaslo` i `jdk`. **Nie należy dopisywać do pola SSH serwerów FTP tylko dlatego, że adres ma postać `ftp.cluster...`.** Sama znajomość nazwy SSH na cluster128 również nie pozwala na logowanie bez loginu i autoryzacji klucza.
+
+Dla Parkowej znany jest login FTP `parkowd`, jednak nie zapisujemy go w plikach startowych GitHuba. Można go bezpiecznie wpisać w *lokalnym* oknie **Hosting / dostęp** po zaznaczeniu `parkowajaslo.pl`. Hasła pozostają w Bitwardenie i **nigdy** nie są wprowadzane do panelu BeardedWolf Admin.
+
+Przy pierwszym otwarciu nowej wersji lokalny `~/.config/beardedwolf/sites.json` zostanie **jednorazowo rozszerzony o brakujące pola hostingu**, z zachowaniem starych profili SSH, uprawnień i baseline. Automatyczny zapis tworzy kopię `~/.config/beardedwolf/sites.json.previous.bak`. Jeśli pole `hosting` było już zdefiniowane, nie zostanie nadpisane.
+
+Panel prezentuje dostępne pola hostingu oraz pozwala je ręcznie edytować. Nie próbuje automatycznie połączyć się FTP, SFTP, SSH ani używać niezabezpieczonego FTP na porcie 21. Aby uzyskać zaszyfrowany transfer, sprawdź w panelu **OVHcloud → Hosting → FTP–SSH**, czy dla danego użytkownika dostępne jest **SFTP** (i czy dla pakietu można aktywować SSH); samo FTP nie potwierdza ani SSH, ani SFTP.
+
 ## Jak uruchamiać
 
 Na komputerze z Kali WSL 2 i XFCE:

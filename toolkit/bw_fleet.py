@@ -420,17 +420,18 @@ def public_probe(site):
     observed = []
     failures = []
     # Rozpoznanie jest wykonywane przy każdym teście, ale nie nadpisuje ręcznych ustawień.
-    try:
-        discovery = bw_discover.inspect_public(domain)
-        if (site["type"] == "sprawdzic" and
-                discovery["type_suggestion"] == "wordpress" and
-                discovery["confidence"] == "wysoka"):
-            # Tylko wysoko wiarygodny WordPress, zachowując grupę i przypisany hosting.
-            update_site(domain, site["group"], "wordpress")
-            site = dict(site, type="wordpress")
-            discovery["auto_updated"] = True
-    except Exception as exc:
-        discovery = {"errors": ["Rozpoznanie niedostępne: " + type(exc).__name__]}
+    discovery = {"evidence": ["Platforma określona ręcznie; rozpoznanie automatyczne pominięte."]}
+    if site["type"] == "sprawdzic":
+        try:
+            discovery = bw_discover.inspect_public(domain)
+            if (discovery["type_suggestion"] == "wordpress" and
+                    discovery["confidence"] == "wysoka"):
+                # Tylko wysoko wiarygodny WordPress, zachowując grupę i przypisany hosting.
+                update_site(domain, site["group"], "wordpress")
+                site = dict(site, type="wordpress")
+                discovery["auto_updated"] = True
+        except Exception as exc:
+            discovery = {"errors": ["Rozpoznanie niedostępne: " + type(exc).__name__]}
 
 
     for check_id, kind, title in [

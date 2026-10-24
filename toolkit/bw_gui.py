@@ -161,6 +161,7 @@ class AdminApp:
         ssh_row = ttk.Frame(tab)
         ssh_row.pack(anchor="w", fill="x", pady=(5, 0))
         ttk.Button(ssh_row, text="Przypisz SSH / katalog", command=self.map_site_ssh).pack(side="left", padx=(0, 6))
+        ttk.Button(ssh_row, text="Utwórz profil SSH", command=self.create_ssh_for_site).pack(side="left", padx=(0, 6))
         ttk.Button(ssh_row, text="Sugerowane powiązania OVH", command=self.apply_known_ssh).pack(
             side="left", padx=(0, 6))
         ttk.Button(ssh_row, text="Połącz z SSH strony", command=self.open_mapped_ssh).pack(side="left")
@@ -360,6 +361,68 @@ class AdminApp:
             self.status.set("Usunięto serwis z rejestru: " + site["domain"])
         except Exception as exc:
             messagebox.showerror("Nie usunięto", str(exc), parent=self.root)
+
+    def create_ssh_for_site(self):
+        """Create a local SSH profile only from an explicit SSH host and user input."""
+        site = self.selected_site()
+        if site is None:
+            return
+        info = bw_fleet.hosting_info(site)
+        if info["access"] != "ssh" or not info["host"]:
+            messagebox.showwarning(
+                "Brak potwierdzonego hosta SSH",
+                "Ten serwis nie ma potwierdzonych danych SSH. "
+                "FTP nie jest SSH. Sprawdź protokół i adres w danych hostingowych.",
+                parent=self.root
+            )
+            return
+        if site.get("ssh_alias"):
+            messagebox.showinfo(
+                "Profil już przypisany",
+                "Serwis ma już profil " + site["ssh_alias"] +
+                ". Możesz go zmienić przyciskiem Przypisz SSH / katalog.",
+                parent=self.root
+            )
+            return
+        suggested = "pttk" if site["domain"] == "jaslopttk.pl" else site["domain"].split(".")[0]
+        alias = simpledialog.askstring(
+            "Nowy lokalny profil SSH",
+            f"Alias dla {site['domain']} ({info['host']}):",
+            parent=self.root, initialvalue=suggested
+        )
+        if not alias:
+            return
+        user = simpledialog.askstring(
+            "Login konta SSH",
+            "Wpisz potwierdzony login SSH (nie hasło). Bez loginu nie tworzymy profilu.",
+            parent=self.root, initialvalue=info["user"] or ""
+        )
+        if not user:
+            return
+        if not messagebox.askyesno(
+            "Zapisz lokalny profil SSH",
+            f"Serwis: {site['domain']}\n"
+            f"Profil: {alias}\n"
+            f"Połączenie: {user}@{info['host']}:{info['port'] or 22}\n\n"
+            "Zapis dotyczy wyłącznie plików konfiguracji lokalnej. "
+            "Nie wykonujemy logowania, nie wysyłamy klucza i nie zmieniamy serwera.",
+            parent=self.root
+        ):
+            return
+        try:
+            bw_servers.add_profile(alias.strip(), info["host"], user.strip(), info["port"] or 22)
+            bw_fleet.assign_ssh(site["domain"], alias.strip(), site.get("wp_root"))
+            self.refresh_servers()
+            self.refresh_fleet()
+            self.status.set("Dodano profil SSH dla " + site["domain"] +
+                            ". Skonfiguruj klucz w zakładce Serwery SSH.")
+        except (OSError, RuntimeError, ValueError) as exc:
+            messagebox.showerror(
+                "Nie ukończono konfiguracji",
+                str(exc) + "\nJeśli zapis profilu SSH się udał, ale przypisanie "
+                "do serwisu nie, sprawdź oba wpisy przed ponowną próbą.",
+                parent=self.root
+            )
 
     def map_site_ssh(self):
         site = self.selected_site()

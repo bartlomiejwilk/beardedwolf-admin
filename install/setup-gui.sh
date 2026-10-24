@@ -28,7 +28,7 @@ if ! "$PYTHON" -c 'import tkinter; print("Tkinter jest dostepny:", tkinter.TkVer
   echo "Nie udalo sie zaladowac tkinter z systemowego Pythona." >&2
   echo "Python w PATH: $(command -v python3 || true)" >&2
   echo "Python systemowy: $("$PYTHON" --version 2>&1)" >&2
-  echo "Pakiet tkinter: $(dpkg-query -W -f='\''${Status} ${Version}'\'' python3-tk 2>/dev/null || true)" >&2
+  dpkg-query -W python3-tk >&2 || true
   exit 1
 fi
 

@@ -137,6 +137,62 @@ class FleetTests(unittest.TestCase):
             self.assertEqual(fleet.apply_suggestions(), [])
             self.assertEqual(fleet.get_site("example.org")["wp_root"], "/home/other/site")
 
+    def test_hosting_migration_keeps_local_ssh_and_scope(self):
+        fleet.set_authorized("example.org", True)
+        with patch.object(fleet.bw_servers, "load_profiles", return_value=[
+            {"alias": "myssh", "host": "ssh.example.org", "user": "web", "port": 22}
+        ]):
+            fleet.assign_ssh("example.org", "myssh", "/home/web/site")
+        # Deliberately remove newly added hosting metadata as with a legacy installation.
+        payload = fleet.inventory()
+        del payload["sites"][0]["hosting"]
+        fleet.atomic_json(fleet.SITES_FILE, payload)
+        defaults = self.settings / "hosting-defaults.json"
+        defaults.write_text(json.dumps({"sites": {
+            "example.org": {"provider": "OVHcloud", "access": "ftp",
+                            "host": "ftp.cluster130.hosting.ovh.net", "port": 21}
+        }}), encoding="utf-8")
+        with patch.object(fleet, "HOSTING_DEFAULTS", defaults):
+            migrated = fleet.get_site("example.org")
+        self.assertEqual(migrated["hosting"]["provider"], "OVHcloud")
+        self.assertEqual(migrated["hosting"]["access"], "ftp")
+        self.assertTrue(migrated["authorized"])
+        self.assertEqual(migrated["ssh_alias"], "myssh")
+        self.assertEqual(migrated["wp_root"], "/home/web/site")
+        self.assertTrue((self.settings / "sites.json.previous.bak").exists())
+
+    def test_ftp_metadata_without_ssh_assignment(self):
+        saved = fleet.update_hosting(
+            "example.org", "OVHcloud", "ftp",
+            "ftp.cluster130.hosting.ovh.net", 21, "parkowd"
+        )
+        self.assertEqual(saved["access"], "ftp")
+        self.assertEqual(saved["user"], "parkowd")
+        self.assertIsNone(fleet.get_site("example.org")["ssh_alias"])
+        self.assertEqual(fleet.hosting_info(fleet.get_site("example.org"))["port"], 21)
+
+    def test_reject_credentials_in_host_and_invalid_hosting(self):
+        for host in ("ftp://parkowd@ftp.cluster130.hosting.ovh.net:21/",
+                     "parkowd:secret@ftp.cluster130.hosting.ovh.net",
+                     "ftp.example.org;rm -rf"):
+            with self.assertRaises(ValueError):
+                fleet.normalize_hosting("OVHcloud", "ftp", host, 21)
+        with self.assertRaises(ValueError):
+            fleet.normalize_hosting("OVHcloud", "ftp", "ftp.example.org", 21,
+                                    "parkowd:secret")
+        with self.assertRaises(ValueError):
+            fleet.normalize_hosting("OVHcloud", "sudoss", None, None)
+
+    def test_provider_edit_does_not_reset_platform_or_ssh(self):
+        fleet.set_authorized("example.org", True)
+        fleet.update_site("example.org", "um", "wordpress")
+        fleet.update_hosting("example.org", "nazwa.pl", "unknown")
+        current = fleet.get_site("example.org")
+        self.assertTrue(current["authorized"])
+        self.assertEqual(current["group"], "um")
+        self.assertEqual(current["type"], "wordpress")
+        self.assertEqual(current["hosting"]["provider"], "nazwa.pl")
+
     def test_deny_non_inventory_domain(self):
         with self.assertRaisesRegex(ValueError, "Brak domeny"):
             fleet.get_site("unknown.example.org")

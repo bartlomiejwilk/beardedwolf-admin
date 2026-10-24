@@ -29,6 +29,7 @@ class AdminApp:
         self.messages = queue.Queue()
         self.last_report = None
         self.profiles = []
+        self.editing_alias = None
         self.running = False
 
         self.domain = tk.StringVar(value="")
@@ -122,8 +123,9 @@ class AdminApp:
             self.server_list.heading(col, text=name)
             self.server_list.column(col, width=width, stretch=col == "host")
         self.server_list.pack(fill="x")
+        self.server_list.bind("<<TreeviewSelect>>", self.on_server_select)
 
-        fields = ttk.LabelFrame(tab, text="Dodaj połączenie SSH", padding=12)
+        fields = ttk.LabelFrame(tab, text="Dodaj lub edytuj połączenie SSH", padding=12)
         fields.pack(fill="x")
         fields.columnconfigure(1, weight=1)
         for row, (label, variable) in enumerate([
@@ -134,8 +136,14 @@ class AdminApp:
         ]):
             ttk.Label(fields, text=label + ":").grid(row=row, column=0, sticky="w", pady=4, padx=(0, 14))
             ttk.Entry(fields, textvariable=variable).grid(row=row, column=1, sticky="ew", pady=4)
-        ttk.Button(fields, text="Zapisz profil serwera", command=self.save_profile).grid(
-            row=4, column=1, sticky="e", pady=(10, 0))
+        field_buttons = ttk.Frame(fields)
+        field_buttons.grid(row=4, column=0, columnspan=2, sticky="e", pady=(10, 0))
+        self.save_button = ttk.Button(field_buttons, text="Dodaj serwer", command=self.save_profile)
+        self.save_button.pack(side="left", padx=(0, 6))
+        ttk.Button(field_buttons, text="Anuluj edycję / wyczyść", command=self.reset_server_form).pack(
+            side="left", padx=(0, 6))
+        self.delete_button = ttk.Button(field_buttons, text="Usuń zaznaczony", command=self.delete_profile)
+        self.delete_button.pack(side="left")
 
         actions = ttk.Frame(tab)
         actions.pack(fill="x", pady=(14, 5))
@@ -271,25 +279,80 @@ class AdminApp:
             return None
         return self.profiles[int(selection[0])]
 
-    def save_profile(self):
-        try:
-            profile = bw_servers.add_profile(
-                self.alias.get(), self.host.get(), self.username.get(), self.port.get())
-        except (OSError, ValueError) as exc:
-            messagebox.showerror("Nie zapisano serwera", str(exc), parent=self.root)
-            return
-        self.refresh_servers()
-        for index, item in enumerate(self.profiles):
-            if item["alias"] == profile["alias"]:
-                self.server_list.selection_set(str(index))
-                self.server_list.focus(str(index))
-                self.server_list.see(str(index))
-                break
-        self.status.set("Dodano profil: " + profile["alias"])
+    def reset_server_form(self):
+        self.editing_alias = None
         self.alias.set("")
         self.host.set("")
         self.username.set("")
         self.port.set("22")
+        self.save_button.configure(text="Dodaj serwer")
+        if self.server_list.selection():
+            self.server_list.selection_remove(*self.server_list.selection())
+
+    def on_server_select(self, _event=None):
+        selection = self.server_list.selection()
+        if not selection:
+            return
+        profile = self.profiles[int(selection[0])]
+        self.editing_alias = profile["alias"]
+        self.alias.set(profile["alias"])
+        self.host.set(profile["host"])
+        self.username.set(profile["user"])
+        self.port.set(str(profile["port"]))
+        self.save_button.configure(text="Zapisz zmiany")
+        self.status.set("Edytujesz profil: " + profile["alias"] +
+                        ". Alias jest stały, aby zachować istniejący klucz SSH.")
+
+    def select_server_by_alias(self, alias):
+        for index, item in enumerate(self.profiles):
+            if item["alias"] == alias:
+                self.server_list.selection_set(str(index))
+                self.server_list.focus(str(index))
+                self.server_list.see(str(index))
+                self.on_server_select()
+                break
+
+    def save_profile(self):
+        try:
+            if self.editing_alias:
+                if self.alias.get() != self.editing_alias:
+                    raise ValueError("Nie zmieniaj aliasu. Jest powiązany z kluczem SSH. "
+                                     "Możesz edytować host, login i port.")
+                profile = bw_servers.update_profile(
+                    self.editing_alias, self.host.get(), self.username.get(), self.port.get())
+                action = "Zaktualizowano"
+            else:
+                profile = bw_servers.add_profile(
+                    self.alias.get(), self.host.get(), self.username.get(), self.port.get())
+                action = "Dodano"
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Nie zapisano serwera", str(exc), parent=self.root)
+            return
+        self.refresh_servers()
+        self.select_server_by_alias(profile["alias"])
+        self.status.set(action + " profil: " + profile["alias"])
+
+    def delete_profile(self):
+        profile = self.selected_profile()
+        if profile is None:
+            return
+        alias = profile["alias"]
+        if not messagebox.askyesno(
+            "Usuń lokalny profil SSH",
+            f"Usunąć profil '{alias}' z BeardedWolf Admin i sekcji SSH? "
+            "Prywatny i publiczny klucz pozostaną na dysku. "
+            "Nie zmienimy serwera ani pliku authorized_keys.",
+            parent=self.root
+        ):
+            return
+        try:
+            bw_servers.delete_profile(alias)
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Nie usunięto profilu", str(exc), parent=self.root)
+            return
+        self.refresh_servers()
+        self.reset_server_form()
+        self.status.set("Usunięto profil lokalny: " + alias + ". Klucze SSH zachowano.")
 
     def new_key(self):
         p = self.selected_profile()

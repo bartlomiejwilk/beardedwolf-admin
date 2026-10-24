@@ -4,6 +4,7 @@ Brak automatycznej instalacji WP-CLI, brak haseł w komendach, brak uruchomienia
 aktualizacji z pulpitu kafelków. Zmiany wyłącznie po odrębnym potwierdzeniu GUI.
 """
 from datetime import datetime, timezone
+from pathlib import Path
 import json
 import re
 import shlex
@@ -92,6 +93,22 @@ def list_updates(site):
     }
 
 
+def record_operation(domain, operation, target, success, details=""):
+    """Zapis lokalny bez sekretów i pełnego stdout/stderr z serwera."""
+    path = bw_fleet.site_report_dir(domain)
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    timestamp = datetime.now(timezone.utc)
+    report = path / ("wp_change_" + timestamp.strftime("%Y%m%dT%H%M%S_%f") + ".json")
+    bw_fleet.atomic_json(report, {
+        "domain": domain, "operation": operation, "target": target,
+        "success": bool(success), "checked_at": timestamp.isoformat(),
+        "description": details[:400],
+        "backup_confirmed_by_user": True,
+        "backup_verified_by_software": False,
+    })
+    return report
+
+
 def update_plugin(site, name, expected_version, expected_target):
     """Aktualizacja JEDNEJ wybranej wtyczki, nigdy --all."""
     if not PLUGIN_NAME.fullmatch(str(name)):
@@ -113,5 +130,12 @@ def update_core(site, expected_current, target):
     if fresh["current_core"] != expected_current or target not in fresh["core_targets"]:
         raise RuntimeError("Zmieniono wersję Core lub ofertę aktualizacji. Odśwież listę.")
     output = remote(site, ["core", "update", "--version=" + target], timeout=240)
-    # Nie wykonujemy automatycznie wp core update-db bez osobnej kontroli migracji bazy.
-    return output[-5000:]
+    # Po zmianie plików Core wykonujemy wymaganą aktualizację schematu bazy.
+    # To operacja modyfikująca bazę, wyraźnie objęta potwierdzeniem w GUI.
+    try:
+        db_result = remote(site, ["core", "update-db"], timeout=240)
+    except Exception as exc:
+        raise RuntimeError("Pliki Core zaktualizowano, ale aktualizacja bazy mogła "
+                           "się nie udać! Sprawdź stan serwisu i kopię zapasową "
+                           "przed kolejnymi zmianami.") from exc
+    return (output[-2500:] + "\nBaza danych: " + db_result[-1800:])

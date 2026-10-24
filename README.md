@@ -87,3 +87,9 @@ Klikniecie naglowka kolumny w tabelach **Wszystkie serwisy**, **Serwery SSH** i 
 ## Dostawcy hostingowi i dostep FTP / SSH
 
 Lista serwisow wyswietla teraz osobno **platforme**, **hosting**, **potwierdzony dostep** i **adres serwera**. Przycisk **Hosting / dostep** edytuje lokalnie te dane bez podawania hasel. W dokumentacji [flota-serwisow.md](docs/flota-serwisow.md) zapisano nowe potwierdzenia: PTTK (OVH cluster128, SSH, login nieustalony), UM (nazwa.pl), Jasloiregion (cyber_Folks), NZOZ i Parkowa (OVH cluster130, dostep FTP, SSH niepotwierdzone). Nie utozsamiamy FTP z SSH/SFTP. Starsze rejestry sa rozszerzane tylko o brakujace pola, z kopia zapasowa i zachowaniem mapowania SSH.
+
+## Rozpoznawanie nieustalonych stron i bezpieczny import FileZilli
+
+Klikniecie **Test wybranego** dla domeny o platformie `sprawdzic` wykonuje dodatkowo jednorazowa analize strony glownej i CNAME. Gdy pojawia sie silne sygnaly WordPressa, panel zapisuje `wordpress` w lokalnym rejestrze; przy slabszych sygnalach tylko pokazuje sugestie i dowody w raporcie, bez nadpisywania ustawien. Publiczny HTTP/DNS nie potwierdza dostawcy hostingu ani dostepu SSH.
+
+Przycisk **Import FileZilla** pozwala na PC-Wilk wskazac lokalny `FileZilla.xml` / `sitemanager.xml` i przypisac wybrane metadane do jednej zaznaczonej strony. Import nie pobiera wartosci pola hasla `Pass`, nie dekoduje Base64, nie przenosi `LocalDir` i `RemoteDir`, nie wykonuje polaczen i nie publikuje eksportu w GitHub. Hasla przechowujemy w Bitwardenie. Szczegoly: [docs/flota-serwisow.md](docs/flota-serwisow.md).

@@ -86,6 +86,56 @@ class FleetTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             fleet.add_site("new.example.org", "prywatne", "php -r evil")
 
+    def test_assign_ssh_preserves_authorization_and_root(self):
+        fleet.set_authorized("example.org", True)
+        with patch.object(fleet.bw_servers, "load_profiles", return_value=[
+            {"alias": "jaslo", "host": "ssh.cluster114.hosting.ovh.net", "user": "jaslo", "port": 22}
+        ]):
+            saved = fleet.assign_ssh("example.org", "jaslo", "/home/jaslo/beardedwolf")
+            self.assertEqual(saved["ssh_alias"], "jaslo")
+            self.assertEqual(saved["wp_root"], "/home/jaslo/beardedwolf")
+            site = fleet.get_site("example.org")
+            self.assertTrue(site["authorized"])
+            self.assertEqual(site["ssh_alias"], "jaslo")
+            fleet.assign_ssh("example.org", None, "")
+            self.assertIsNone(fleet.get_site("example.org")["ssh_alias"])
+            self.assertIsNone(fleet.get_site("example.org")["wp_root"])
+
+    def test_reject_missing_local_profile(self):
+        with patch.object(fleet.bw_servers, "load_profiles", return_value=[]):
+            with self.assertRaisesRegex(ValueError, "Nie znaleziono"):
+                fleet.assign_ssh("example.org", "jdk", "/home/jdkjasj/jdk")
+
+    def test_reject_relative_and_traversal_path(self):
+        for root in ("../site", "/home/jaslo/../secret", "/tmp\ncommand", "/tmp/./site"):
+            with self.assertRaises(ValueError):
+                fleet.validate_wp_root(root)
+        self.assertEqual(fleet.validate_wp_root("/home/jaslo/wordpress"),
+                         "/home/jaslo/wordpress")
+
+    def test_suggestions_require_profile_and_confirmation(self):
+        with patch.object(fleet, "SSH_SUGGESTIONS", {"example.org": "jaslo"}), \
+             patch.object(fleet.bw_servers, "load_profiles", return_value=[
+                 {"alias": "jaslo", "host": "ssh.cluster114.hosting.ovh.net",
+                  "user": "jaslo", "port": 22}
+             ]):
+            self.assertEqual(fleet.suggestion_preview(), [("example.org", "jaslo")])
+            self.assertIsNone(fleet.get_site("example.org").get("ssh_alias"))
+            self.assertEqual(fleet.apply_suggestions(), [("example.org", "jaslo")])
+            self.assertEqual(fleet.suggestion_preview(), [])
+            self.assertEqual(fleet.get_site("example.org")["ssh_alias"], "jaslo")
+            self.assertIsNone(fleet.get_site("example.org")["wp_root"])
+
+    def test_suggestions_do_not_overwrite_existing_mapping(self):
+        with patch.object(fleet, "SSH_SUGGESTIONS", {"example.org": "jaslo"}), \
+             patch.object(fleet.bw_servers, "load_profiles", return_value=[
+                 {"alias": "jaslo", "host": "ssh.cluster114.hosting.ovh.net", "user": "jaslo", "port": 22},
+                 {"alias": "other", "host": "ssh.example.org", "user": "other", "port": 22}
+             ]):
+            fleet.assign_ssh("example.org", "other", "/home/other/site")
+            self.assertEqual(fleet.apply_suggestions(), [])
+            self.assertEqual(fleet.get_site("example.org")["wp_root"], "/home/other/site")
+
     def test_deny_non_inventory_domain(self):
         with self.assertRaisesRegex(ValueError, "Brak domeny"):
             fleet.get_site("unknown.example.org")

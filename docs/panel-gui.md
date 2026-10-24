@@ -15,12 +15,12 @@ bash install/setup-gui.sh
 
 Instalator doinstaluje `python3-tk`, `keychain`, `xdg-utils`, `xfce4-terminal` i `openssh-client`, sprawdzi składnię wszystkich modułów GUI, a potem umieści **BeardedWolf Admin** na pulpicie Kali i w menu aplikacji XFCE. Jeśli środowisko XFCE zapyta o zaufanie do skrótu `.desktop`, potwierdź po upewnieniu się, że jego ścieżka wskazuje na lokalne repozytorium.
 
-Możesz także uruchomić panel z terminala graficznego: `python3 ~/beardedwolf/repos/beardedwolf-admin/toolkit/bw_gui.py`.
+Możesz także uruchomić panel z terminala graficznego: `/usr/bin/python3 ~/beardedwolf/repos/beardedwolf-admin/toolkit/bw_gui.py`.
 
 Testy regresyjne, bez wykonywania połączeń sieciowych:
 
 ```bash
-python3 -m unittest discover -s tests -v
+/usr/bin/python3 -m unittest discover -s tests -v
 ```
 
 ## Zakładka „Testy domen”
@@ -66,3 +66,9 @@ python3 ~/beardedwolf/repos/beardedwolf-admin/toolkit/bw_gui.py
 ```
 
 Komunikat o błędzie pojawi się w terminalu. W pierwszej wersji aplikacja wymaga działającego pulpitu graficznego Kali.
+
+### `python3-tk` zainstalowany, a `tkinter` nie działa
+
+W środowisku może występować kilka interpreterów Pythona (np. w `/usr/local/bin` i `/usr/bin`). Instalator i skrót aplikacji używają teraz konsekwentnie `/usr/bin/python3`, zgodnego z `python3-tk` z menedżera pakietów Kali. Jeśli instalacja była wcześniej przerwana, wykonaj `git pull --ff-only` i ponownie `bash install/setup-gui.sh`. Nie instaluj Tkinter za pomocą `sudo pip`, ponieważ może to uszkodzić zależności systemowe.
+
+Jeżeli `~/.local/bin/bw` już istnieje, ale działa polecenie `bw doctor`, pomiń ponowną instalację `setup-toolkit.sh`; panel GUI nie wymaga wymiany działającego pliku. Nie usuwaj tego pliku bez sprawdzenia jego zawartości.

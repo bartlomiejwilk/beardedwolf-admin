@@ -139,7 +139,7 @@ class AdminApp:
 
         actions = ttk.Frame(tab)
         actions.pack(fill="x", pady=(14, 5))
-        ttk.Button(actions, text="Utwórz klucz SSH", command=self.new_key).pack(
+        ttk.Button(actions, text="Utwórz klucz serwera", command=self.new_key).pack(
             side="left", padx=(0, 7))
         ttk.Button(actions, text="Dodaj klucz na serwer", command=self.copy_key).pack(
             side="left", padx=(0, 7))
@@ -147,7 +147,7 @@ class AdminApp:
             side="left", padx=(0, 7))
         ttk.Button(actions, text="Test połączenia", command=self.verify).pack(side="left")
         ttk.Label(tab, text=(
-            "Najpierw utwórz oddzielny klucz SSH z hasłem zabezpieczającym. "
+            "Najpierw zapisz i wybierz serwer, a następnie utwórz dla niego osobny klucz SSH z hasłem. "
             "Dodanie klucza do serwera wymaga jednorazowego uwierzytelnienia. "
             "Przy pierwszym połączeniu potwierdź odcisk klucza hosta niezależnym kanałem. "
             "Kolejne połączenia używają agenta SSH (keychain)."),
@@ -161,7 +161,7 @@ class AdminApp:
             "Każde uruchomienie wybranych testów tworzy jeden raport HTML w ~/beardedwolf/raporty/PAKIET.",
             "Eksport do Syncthing wymaga zaznaczenia pola na karcie Testy domen. Raporty poufne powinny pozostać lokalne, szczególnie na komputerze bez szyfrowania dysku.",
             "Profile serwerów zapisują tylko alias, host, port i użytkownika w ~/.config/beardedwolf/servers.json, a konfiguracja SSH powstaje w ~/.ssh/config. Żadnych haseł ani prywatnych kluczy nie przesyłamy do GitHuba.",
-            "Klucz SSH BeardedWolf do serwerów jest osobny na każdym komputerze i różni się od klucza GitHub. Autoryzacja na serwerze odbywa się tylko po Twojej decyzji.",
+            "Każdy profil serwera ma oddzielny klucz SSH na danym komputerze, niezależny również od klucza GitHub. Autoryzacja klucza na serwerze odbywa się tylko po Twojej decyzji.",
         ]
         for paragraph in paragraphs:
             ttk.Label(tab, text=paragraph, wraplength=790, justify="left").pack(
@@ -292,9 +292,12 @@ class AdminApp:
         self.port.set("22")
 
     def new_key(self):
+        p = self.selected_profile()
+        if p is None:
+            return
         try:
-            bw_servers.create_key()
-            self.status.set("Otwarto tworzenie klucza SSH. Ustaw unikalne hasło klucza.")
+            bw_servers.create_key(p)
+            self.status.set("Otwarto tworzenie klucza dla " + p["alias"] + ". Ustaw unikalną passphrase.")
         except (OSError, ValueError, RuntimeError) as exc:
             messagebox.showerror("Klucz SSH", str(exc), parent=self.root)
 

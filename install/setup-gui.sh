@@ -21,14 +21,20 @@ repo="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 sudo apt-get update
 sudo apt-get install -y python3-tk keychain xdg-utils xfce4-terminal openssh-client
 
-python3 - <<'PY'
-import tkinter
-print("Tkinter jest dostepny.")
-PY
+# Uzywamy systemowego Pythona (z pakietami apt), nie binarnego z PATH
+# (np. /usr/local/bin/python3 lub srodowiska wirtualnego).
+PYTHON=/usr/bin/python3
+if ! "$PYTHON" -c 'import tkinter; print("Tkinter jest dostepny:", tkinter.TkVersion)'; then
+  echo "Nie udalo sie zaladowac tkinter z systemowego Pythona." >&2
+  echo "Python w PATH: $(command -v python3 || true)" >&2
+  echo "Python systemowy: $("$PYTHON" --version 2>&1)" >&2
+  echo "Pakiet tkinter: $(dpkg-query -W -f='\''${Status} ${Version}'\'' python3-tk 2>/dev/null || true)" >&2
+  exit 1
+fi
 
 cache_dir="$HOME/.cache/beardedwolf-admin/pycache"
 mkdir -p "$cache_dir"
-PYTHONPYCACHEPREFIX="$cache_dir" python3 -m py_compile \
+PYTHONPYCACHEPREFIX="$cache_dir" "$PYTHON" -m py_compile \
   "$repo/toolkit/bw" "$repo/toolkit/bw_gui.py" "$repo/toolkit/bw_servers.py"
 echo "Sprawdzono skladnie Python."
 
@@ -69,5 +75,5 @@ fi
 
 printf '\nGotowe. Ikona na pulpicie Kali: %s\n' "$desktop_shortcut"
 printf 'Mozesz uruchomic bez pulpitu klikajac wpis w menu aplikacji XFCE.\n'
-printf 'Test w terminalu sesji graficznej: python3 %s/toolkit/bw_gui.py\n' "$repo"
+printf 'Test w terminalu sesji graficznej: /usr/bin/python3 %s/toolkit/bw_gui.py\n' "$repo"
 printf 'Wszystkie profile i klucze SSH zostaja w katalogu domowym, poza repozytorium.\n'

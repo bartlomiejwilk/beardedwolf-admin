@@ -71,6 +71,24 @@ Przy pierwszym otwarciu nowej wersji lokalny `~/.config/beardedwolf/sites.json` 
 
 Panel prezentuje dostępne pola hostingu oraz pozwala je ręcznie edytować. Po zaznaczeniu PTTK można użyć przycisku **Utwórz profil SSH**: panel wykorzysta znany host `ssh.cluster128.hosting.ovh.net`, ale zapyta o rzeczywisty login użytkownika SSH. Bez tego loginu nie utworzy profilu. Profil i powiązanie będą zapisane wyłącznie lokalnie, bez próby logowania. Potem klucz SSH można skonfigurować w zakładce **Serwery SSH**. Nie próbuje automatycznie połączyć się FTP, SFTP, SSH ani używać niezabezpieczonego FTP na porcie 21. Aby uzyskać zaszyfrowany transfer, sprawdź w panelu **OVHcloud → Hosting → FTP–SSH**, czy dla danego użytkownika dostępne jest **SFTP** (i czy dla pakietu można aktywować SSH); samo FTP nie potwierdza ani SSH, ani SFTP.
 
+## Automatyczne rozpoznawanie przy „Test wybranego”
+
+Gdy platforma serwisu jest jeszcze **nieustalona**, zwykły test publiczny dodatkowo pobiera wyłącznie stronę główną (maksymalnie 128 KiB HTML) oraz rekord CNAME. Z dostępnych znaczników generowanych przez WordPress (nagłówek Link API, znaczniki generatora, zasoby `wp-content`) tworzy **opis dowodów i poziom pewności**. Tylko przy wysokiej pewności automatycznie zamienia `sprawdzic` na `wordpress`. Przy słabych lub sprzecznych sygnałach pozostawia stan nieustalony. Nigdy nie nadpisuje ręcznie wskazanego typu serwisu.
+
+Nowe informacje znajdują się w sekcji **Rozpoznanie platformy (poszlaki)** raportu HTML i w obiekcie `discovery` pliku JSON. Dodatkowy skan może rozpoznać przekierowanie i wskazać CNAME, ale **nie dowodzi**, kto jest dostawcą hostingu WWW ani czy konto FTP ma powłokę SSH. Tych informacji nie uzupełniamy automatycznie na podstawie samego IP, nagłówków HTTP albo DNS. Obsługiwane są tylko pojedyncze żądania odczytowe na domenach potwierdzonych do kontroli.
+
+Nieznana platforma nie oznacza infekcji ani błędu serwisu. Mogą pozostać nierozpoznane instalacje WP ukrywające standardowe ślady oraz autorskie CMS-y.
+
+## Import lokalnego eksportu FileZilli bez haseł
+
+W zakładce **Wszystkie serwisy** zaznacz domenę i wybierz **Import FileZilla**. Wskaż na lokalnym dysku eksport menedżera połączeń FileZilla `FileZilla.xml` lub `sitemanager.xml`. Program wyświetli listę nazw, hostów, portów, typów protokołu i loginów. **Nie odczytuje w żadnym celu zawartości `Pass`, nie dekoduje jej i nie zapisuje poświadczeń.** Nie czyta też ścieżek z `LocalDir`, `RemoteDir` ani danych kluczy.
+
+Zaznacz właściwy profil z listy i kliknij **Przypisz do serwisu**. Przed zmianą zostanie wyświetlone potwierdzenie pokazujące stary i nowy adres dostępu. Zmienia się tylko lokalna sekcja hostingu danej domeny, nigdy istniejący alias SSH, konto zdalne, klucze czy `authorized_keys`.
+
+Interpretacja protokołu jest zachowawcza: **FTP** (w tym FileZilla z TLS opcjonalnym) nie potwierdza faktycznego szyfrowania transferu ani dostępu SSH. **SFTP** oznacza transfer przez SSH, ale nie potwierdza prawa do powłoki systemowej. Dla nieznanych numerów protokołów import jest blokowany do czasu ręcznej weryfikacji. Eksport XML należy traktować jak pełny plik z hasłami, ponieważ w FileZilli mogą być kodowane w Base64. Nie publikuj go w GitHubie, czacie ani dysku współdzielonym. Korzystaj z Bitwardena jako sejfu.
+
+Importer nie próbuje łączyć się z serwerami i nie automatyzuje transferów FTP. Nie przechowuje oryginalnego XML. Zakłada, że eksport jest kompletnym, poprawnym plikiem XML, nie fragmentem wklejonym do edytora; używa ograniczenia rozmiaru 5 MiB i odrzuca definicje DTD/ENTITY.
+
 ## Jak uruchamiać
 
 Na komputerze z Kali WSL 2 i XFCE:

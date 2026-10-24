@@ -86,6 +86,51 @@ def get_site(domain):
     raise ValueError("Brak domeny w rejestrze: " + domain)
 
 
+def add_site(domain, group, platform):
+    domain = base.domain_name(domain)
+    group = group.strip()
+    if not group or len(group) > 64 or any(c in group for c in "\r\n<>"):
+        raise ValueError("Podaj prawidłową nazwę grupy (do 64 znaków)")
+    if platform not in ALLOWED_TYPES:
+        raise ValueError("Nieprawidłowy typ serwisu")
+    payload = inventory()
+    if any(row["domain"] == domain for row in payload["sites"]):
+        raise ValueError("Domena już istnieje w rejestrze")
+    payload["sites"].append({
+        "id": domain, "domain": domain, "group": group, "type": platform,
+        "public_checks": True, "authorized": False,
+        "ssh_alias": None, "wp_root": None,
+        "notes": "Nowy serwis: wymaga potwierdzenia uprawnień i konfiguracji.",
+    })
+    atomic_json(SITES_FILE, payload)
+
+
+def update_site(domain, group, platform):
+    domain = base.domain_name(domain)
+    group = group.strip()
+    if not group or len(group) > 64 or any(c in group for c in "\r\n<>"):
+        raise ValueError("Podaj prawidłową nazwę grupy")
+    if platform not in ALLOWED_TYPES:
+        raise ValueError("Nieprawidłowy typ serwisu")
+    payload = inventory()
+    for site in payload["sites"]:
+        if site["domain"] == domain:
+            site["group"], site["type"] = group, platform
+            atomic_json(SITES_FILE, payload)
+            return
+    raise ValueError("Nie znaleziono serwisu: " + domain)
+
+
+def remove_site(domain):
+    domain = base.domain_name(domain)
+    payload = inventory()
+    retained = [s for s in payload["sites"] if s["domain"] != domain]
+    if len(retained) == len(payload["sites"]):
+        raise ValueError("Nie znaleziono serwisu: " + domain)
+    payload["sites"] = retained
+    atomic_json(SITES_FILE, payload)
+
+
 def set_authorized(domain, authorized):
     payload = inventory()
     matched = False
@@ -177,12 +222,22 @@ def approve_baseline(domain):
 
 
 def probe_url(url):
+    # Bez podążania za przekierowaniami na inne hosty / adresy wewnętrzne.
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            return None
+
     request = urllib.request.Request(url, headers=HEADERS, method="HEAD")
+    opener = urllib.request.build_opener(NoRedirect)
     try:
-        with urllib.request.urlopen(request, timeout=10) as response:
+        with opener.open(request, timeout=10) as response:
             return response.status, response.geturl(), response.headers
     except urllib.error.HTTPError as exc:
-        return exc.code, exc.geturl(), exc.headers
+        destination = exc.headers.get("Location", "")
+        target = urllib.parse.urljoin(url, destination) if (
+            300 <= exc.code < 400 and destination
+        ) else exc.geturl()
+        return exc.code, target, exc.headers
 
 
 def public_probe(site):

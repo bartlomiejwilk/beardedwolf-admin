@@ -77,3 +77,9 @@ Nowa zakladka **Wszystkie serwisy** w panelu XFCE pozwala dodawac i edytowac ser
 Katalog `config/checks.json` zawiera T01-T40. Obecnie dziala **9 podstawowych kontroli publicznych**; pozostale 31 nie sa jeszcze wykonywane, wymagaja m.in. wlasciwego dostepu SSH i lokalizacji WordPress. Zaden niewykonany test nie jest prezentowany jako OK.
 
 Po `git pull --ff-only` i ponownym uruchomieniu panelu widoczna bedzie nowa zakladka. Testy lokalne: `python3 -m unittest discover -s tests -v`. Szczegoly ograniczen, uprawnien i plan wdrozenia: [docs/flota-serwisow.md](docs/flota-serwisow.md).
+
+## Przypisywanie stron do profili SSH i sortowanie tabel
+
+W zakladce **Wszystkie serwisy** jest przycisk **Przypisz SSH / katalog**. Pozwala wskazac jeden z rzeczywiscie zapisanych lokalnie profili SSH (np. `jaslo`, `jdk`) i opcjonalny zweryfikowany katalog WWW/WordPress na serwerze. **Sugerowane powiazania OVH** pokazuje szesc znanych przypisan przed potwierdzeniem, nie nadpisuje juz istniejacych. Bez aktywnego lokalnego profilu nie zapisze mapowania. Przycisk **Polacz z SSH strony** otwiera sesje po oddzielnym potwierdzeniu, nie wykonuje automatycznych testow hostowych. Profile SSH nadal pozostaja tylko na danym komputerze. Szczegoly: [docs/flota-serwisow.md](docs/flota-serwisow.md).
+
+Klikniecie naglowka kolumny w tabelach **Wszystkie serwisy**, **Serwery SSH** i **Kontrole T01-T40** zmienia sortowanie rosnaco/malejaco bez zmiany zapamietanego przypisania wierszy do obiektow.

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "note": "Inwentaryzacja wstepna na podstawie dotychczasowych prac; wymaga potwierdzenia zakresu uprawnien i platform. Zadna strona nie ma przypisanego automatycznie SSH ani sciezki WordPress.",
+  "note": "Inwentaryzacja startowa: platforma, dostawca i dostep wymagaja weryfikacji. Dane hostingowe od uzytkownika 2026-10-24. SSH, SFTP i FTP to rozne protokoly; brak danych SSH nie oznacza, ze go nie ma. Zadne klucze ani hasla nie sa przechowywane w repo.",
   "sites": [
     {
       "id": "bartlomiejwilk.pl",
@@ -11,7 +11,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "nieustalony",
+        "access": "unknown",
+        "host": null,
+        "port": null,
+        "user": null
+      }
     },
     {
       "id": "beardedwolf.pl",
@@ -22,7 +29,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "OVHcloud",
+        "access": "ssh",
+        "host": "ssh.cluster114.hosting.ovh.net",
+        "port": 22,
+        "user": null
+      }
     },
     {
       "id": "art.beardedwolf.pl",
@@ -33,7 +47,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "OVHcloud",
+        "access": "ssh",
+        "host": "ssh.cluster114.hosting.ovh.net",
+        "port": 22,
+        "user": null
+      }
     },
     {
       "id": "carpathian.art",
@@ -44,7 +65,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "nieustalony",
+        "access": "unknown",
+        "host": null,
+        "port": null,
+        "user": null
+      }
     },
     {
       "id": "emcom.rzeszow.pl",
@@ -55,7 +83,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "nieustalony",
+        "access": "unknown",
+        "host": null,
+        "port": null,
+        "user": null
+      }
     },
     {
       "id": "jaslo.org.pl",
@@ -66,7 +101,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "nieustalony",
+        "access": "unknown",
+        "host": null,
+        "port": null,
+        "user": null
+      }
     },
     {
       "id": "jasloiregion.pl",
@@ -77,7 +119,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "cyber_Folks",
+        "access": "unknown",
+        "host": null,
+        "port": null,
+        "user": null
+      }
     },
     {
       "id": "jaslopttk.pl",
@@ -88,7 +137,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "OVHcloud",
+        "access": "ssh",
+        "host": "ssh.cluster128.hosting.ovh.net",
+        "port": 22,
+        "user": null
+      }
     },
     {
       "id": "labdostepnosci.pl",
@@ -99,7 +155,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "OVHcloud",
+        "access": "ssh",
+        "host": "ssh.cluster114.hosting.ovh.net",
+        "port": 22,
+        "user": null
+      }
     },
     {
       "id": "mariuszskiba.com",
@@ -110,7 +173,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "nieustalony",
+        "access": "unknown",
+        "host": null,
+        "port": null,
+        "user": null
+      }
     },
     {
       "id": "nzozmedykjaslo.pl",
@@ -121,7 +191,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "OVHcloud",
+        "access": "ftp",
+        "host": "ftp.cluster130.hosting.ovh.net",
+        "port": 21,
+        "user": null
+      }
     },
     {
       "id": "parkowajaslo.pl",
@@ -132,7 +209,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "OVHcloud",
+        "access": "ftp",
+        "host": "ftp.cluster130.hosting.ovh.net",
+        "port": 21,
+        "user": null
+      }
     },
     {
       "id": "rksr.pl",
@@ -143,7 +227,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "nieustalony",
+        "access": "unknown",
+        "host": null,
+        "port": null,
+        "user": null
+      }
     },
     {
       "id": "starycmentarzjaslo.pl",
@@ -154,7 +245,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "nieustalony",
+        "access": "unknown",
+        "host": null,
+        "port": null,
+        "user": null
+      }
     },
     {
       "id": "szeptogra.pl",
@@ -165,7 +263,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "OVHcloud",
+        "access": "ssh",
+        "host": "ssh.cluster114.hosting.ovh.net",
+        "port": 22,
+        "user": null
+      }
     },
     {
       "id": "bip.jdkjaslo.pl",
@@ -176,7 +281,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "nieustalony",
+        "access": "unknown",
+        "host": null,
+        "port": null,
+        "user": null
+      }
     },
     {
       "id": "jdkjaslo.pl",
@@ -187,7 +299,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "OVHcloud",
+        "access": "ssh",
+        "host": "ssh.cluster126.hosting.ovh.net",
+        "port": 22,
+        "user": null
+      }
     },
     {
       "id": "kino.jdkjaslo.pl",
@@ -198,7 +317,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "OVHcloud",
+        "access": "ssh",
+        "host": "ssh.cluster126.hosting.ovh.net",
+        "port": 22,
+        "user": null
+      }
     },
     {
       "id": "um.jaslo.pl",
@@ -209,7 +335,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "nazwa.pl",
+        "access": "unknown",
+        "host": null,
+        "port": null,
+        "user": null
+      }
     },
     {
       "id": "inkubatorjaslo.pl",
@@ -220,7 +353,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "nieustalony",
+        "access": "unknown",
+        "host": null,
+        "port": null,
+        "user": null
+      }
     },
     {
       "id": "hufiec.jaslo.org.pl",
@@ -231,7 +371,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "nieustalony",
+        "access": "unknown",
+        "host": null,
+        "port": null,
+        "user": null
+      }
     },
     {
       "id": "canis-lupus.pl",
@@ -242,7 +389,14 @@
       "authorized": false,
       "ssh_alias": null,
       "wp_root": null,
-      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych.",
+      "hosting": {
+        "provider": "nieustalony",
+        "access": "unknown",
+        "host": null,
+        "port": null,
+        "user": null
+      }
     }
   ]
 }

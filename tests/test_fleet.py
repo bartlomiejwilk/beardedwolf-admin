@@ -69,6 +69,46 @@ class FleetTests(unittest.TestCase):
             self.assertEqual(second["host_checks_state"],
                              "NOT_RUN_NO_AUTHENTICATED_SESSION")
 
+    def test_unknown_platform_autofills_wordpress_only_with_strong_evidence(self):
+        fleet.set_authorized("example.org", True)
+        fleet.update_site("example.org", "private", "sprawdzic")
+        strong = {"type_suggestion": "wordpress", "confidence": "wysoka",
+                  "evidence": ["WP API", "wp-content"], "errors": []}
+        with patch.object(fleet.bw_discover, "inspect_public", return_value=strong), \
+             patch.object(fleet.base, "report_sections",
+                          side_effect=lambda kind, domain: ([("Status", kind)], False)), \
+             patch.object(fleet, "probe_url",
+                          side_effect=lambda url: (404 if "__bw-audit-" in url else 200, url, {})):
+            report, _ = fleet.public_probe(fleet.get_site("example.org"))
+        self.assertEqual(fleet.get_site("example.org")["type"], "wordpress")
+        self.assertEqual(report["discovery"]["type_suggestion"], "wordpress")
+        self.assertTrue(report["discovery"].get("auto_updated"))
+        self.assertTrue(fleet.get_site("example.org")["authorized"])
+
+    def test_weak_evidence_does_not_change_platform(self):
+        fleet.set_authorized("example.org", True)
+        fleet.update_site("example.org", "private", "sprawdzic")
+        weak = {"type_suggestion": "wordpress", "confidence": "wstępna",
+                "evidence": ["wp-content"], "errors": []}
+        with patch.object(fleet.bw_discover, "inspect_public", return_value=weak), \
+             patch.object(fleet.base, "report_sections",
+                          side_effect=lambda kind, domain: ([("Status", kind)], False)), \
+             patch.object(fleet, "probe_url",
+                          side_effect=lambda url: (200, url, {})):
+            report, _ = fleet.public_probe(fleet.get_site("example.org"))
+        self.assertEqual(fleet.get_site("example.org")["type"], "sprawdzic")
+        self.assertFalse(report["discovery"].get("auto_updated", False))
+
+    def test_manual_platform_never_overwritten(self):
+        fleet.set_authorized("example.org", True)
+        with patch.object(fleet.bw_discover, "inspect_public") as discovery, \
+             patch.object(fleet.base, "report_sections",
+                          side_effect=lambda kind, domain: ([("Status", kind)], False)), \
+             patch.object(fleet, "probe_url",
+                          side_effect=lambda url: (200, url, {})):
+            fleet.public_probe(fleet.get_site("example.org"))
+        discovery.assert_not_called()
+
     def test_inventory_crud_keeps_reports(self):
         fleet.add_site("new.example.org", "jdk", "sprawdzic")
         self.assertEqual(fleet.get_site("new.example.org")["type"], "sprawdzic")

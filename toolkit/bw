@@ -10,6 +10,8 @@ import socket
 import ssl
 import subprocess
 import sys
+import urllib.request
+import urllib.error
 
 
 def domain_name(value):
@@ -74,7 +76,7 @@ def report_sections(kind, domain):
             except subprocess.TimeoutExpired:
                 sections.append((title, 'Przekroczono czas odpowiedzi DNS'))
                 failed = True
-    else:
+    elif kind == 'TLS':
         try:
             context = ssl.create_default_context()
             with socket.create_connection((domain, 443), timeout=8) as raw:
@@ -93,7 +95,57 @@ def report_sections(kind, domain):
         except (OSError, ssl.SSLError) as exc:
             failed = True
             sections.append(('Połączenie TLS / certyfikat', f'Niepowodzenie: {exc}'))
+    elif kind == 'HTTP':
+        url = 'https://' + domain + '/'
+        opener = urllib.request.build_opener()
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (compatible; BeardedWolfAdmin/1.0; +local-audit)',
+            'Accept': 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'pl,en;q=0.8',
+        }
+        for method in ('HEAD', 'GET'):
+            request = urllib.request.Request(url, headers=headers, method=method)
+            try:
+                with opener.open(request, timeout=10) as response:
+                    code = response.status
+                    final_url = response.geturl()
+                    response_headers = response.headers
+                break
+            except urllib.error.HTTPError as exc:
+                code, final_url, response_headers = exc.code, exc.geturl(), exc.headers
+                if code in (405, 501) and method == 'HEAD':
+                    continue
+                break
+            except (OSError, ValueError) as exc:
+                sections.append(('Połączenie HTTPS', f'Błąd: {exc}'))
+                return sections, True
+        sections.extend([
+            ('Adres końcowy', final_url),
+            ('Kod HTTP', str(code)),
+            ('Content-Type', response_headers.get('Content-Type', 'Brak')),
+        ])
+        for key in ('Strict-Transport-Security', 'Content-Security-Policy',
+                    'X-Content-Type-Options', 'Referrer-Policy',
+                    'Permissions-Policy', 'X-Frame-Options'):
+            sections.append((f'Nagłówek: {key}', response_headers.get(key, 'Nieobecny')))
+        if code >= 400:
+            failed = True
     return sections, failed
+
+
+def run_suite(domain, tests, use_sync=False):
+    """Uruchom wybrane pasywne testy i zapisz jeden zbiorczy raport HTML."""
+    sections = []
+    failed = False
+    for kind in tests:
+        try:
+            part, had_error = report_sections(kind, domain)
+        except (OSError, RuntimeError, subprocess.SubprocessError, ValueError) as exc:
+            part, had_error = [('Błąd uruchomienia', str(exc))], True
+        sections.extend((f'{kind}: {name}', value) for name, value in part)
+        failed = failed or had_error
+    path = save_report('PAKIET', domain, sections, use_sync)
+    return path, failed
 
 
 def save_report(kind, domain, sections, use_sync):
@@ -144,18 +196,24 @@ def main():
     parser = argparse.ArgumentParser(prog='bw', description='BeardedWolf Admin: diagnostyka i raporty HTML')
     commands = parser.add_subparsers(dest='command', required=True)
     commands.add_parser('doctor', help='Sprawdź narzędzia i dostępność katalogu raportów')
-    for command in ['dns', 'tls']:
+    for command in ['dns', 'tls', 'http']:
         p = commands.add_parser(command, help=f'Wykonaj odczytową kontrolę {command.upper()} i zapisz HTML')
         p.add_argument('domain', type=domain_name)
         p.add_argument('--sync', action='store_true', help='Zapisz raport w folderze Syncthing (świadomy eksport)')
+    p = commands.add_parser('suite', help='Zbiorczy raport DNS, TLS i HTTP')
+    p.add_argument('domain', type=domain_name)
+    p.add_argument('--sync', action='store_true', help='Eksportuj raport do Syncthing')
     args = parser.parse_args()
     if args.command == 'doctor':
         doctor()
         return 0
     kind = args.command.upper()
     try:
-        sections, failed = report_sections(kind, args.domain)
-        path = save_report(kind, args.domain, sections, args.sync)
+        if kind == 'SUITE':
+            path, failed = run_suite(args.domain, ('DNS', 'TLS', 'HTTP'), args.sync)
+        else:
+            sections, failed = report_sections(kind, args.domain)
+            path = save_report(kind, args.domain, sections, args.sync)
     except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
         print(f'Błąd: {exc}', file=sys.stderr)
         return 2

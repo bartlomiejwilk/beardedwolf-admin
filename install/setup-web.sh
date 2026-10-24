@@ -21,7 +21,7 @@ if [[ ! -r "$package_file" ]]; then
 fi
 
 mapfile -t packages < <(grep -Ev '^[[:space:]]*(#|$)' "$package_file")
-if (("${#packages[@]}" == 0)); then
+if ((${#packages[@]} == 0)); then
   printf 'Pusta lista pakietow.\n' >&2
   exit 1
 fi

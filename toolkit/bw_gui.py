@@ -61,8 +61,20 @@ class AdminApp:
 
         self.build()
         self.refresh_servers()
+        self.root.protocol("WM_DELETE_WINDOW", self.on_app_close)
         self.root.after(120, self.pump)
         self.root.after(900, self.refresh_dashboard)
+
+    def on_app_close(self):
+        if any(dialog.get("busy") for dialog in self.wp_dialogs.values()):
+            messagebox.showwarning(
+                "Trwa operacja WordPress",
+                "Sprawdzanie lub aktualizacja WordPress jeszcze trwa. "
+                "Zakończ operację przed zamknięciem aplikacji.",
+                parent=self.root
+            )
+            return
+        self.root.destroy()
 
     def build(self):
         frame = ttk.Frame(self.root, padding=14)

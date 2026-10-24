@@ -135,7 +135,10 @@ class AdminApp:
             ("Port", self.port),
         ]):
             ttk.Label(fields, text=label + ":").grid(row=row, column=0, sticky="w", pady=4, padx=(0, 14))
-            ttk.Entry(fields, textvariable=variable).grid(row=row, column=1, sticky="ew", pady=4)
+            entry = ttk.Entry(fields, textvariable=variable)
+            entry.grid(row=row, column=1, sticky="ew", pady=4)
+            if row == 0:
+                self.alias_entry = entry
         field_buttons = ttk.Frame(fields)
         field_buttons.grid(row=4, column=0, columnspan=2, sticky="e", pady=(10, 0))
         self.save_button = ttk.Button(field_buttons, text="Dodaj serwer", command=self.save_profile)
@@ -286,6 +289,7 @@ class AdminApp:
         self.username.set("")
         self.port.set("22")
         self.save_button.configure(text="Dodaj serwer")
+        self.alias_entry.configure(state="normal")
         if self.server_list.selection():
             self.server_list.selection_remove(*self.server_list.selection())
 
@@ -300,6 +304,7 @@ class AdminApp:
         self.username.set(profile["user"])
         self.port.set(str(profile["port"]))
         self.save_button.configure(text="Zapisz zmiany")
+        self.alias_entry.configure(state="readonly")
         self.status.set("Edytujesz profil: " + profile["alias"] +
                         ". Alias jest stały, aby zachować istniejący klucz SSH.")
 

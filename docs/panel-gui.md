@@ -69,6 +69,15 @@ Komunikat o błędzie pojawi się w terminalu. W pierwszej wersji aplikacja wyma
 
 ### `python3-tk` zainstalowany, a `tkinter` nie działa
 
-W środowisku może występować kilka interpreterów Pythona (np. w `/usr/local/bin` i `/usr/bin`). Instalator i skrót aplikacji używają teraz konsekwentnie `/usr/bin/python3`, zgodnego z `python3-tk` z menedżera pakietów Kali. Jeśli instalacja była wcześniej przerwana, wykonaj `git pull --ff-only` i ponownie `bash install/setup-gui.sh`. Nie instaluj Tkinter za pomocą `sudo pip`, ponieważ może to uszkodzić zależności systemowe.
+W środowisku może występować kilka interpreterów Pythona (np. w `/usr/local/bin` i `/usr/bin`). Instalator sprawdza po kolei dostępne interpretery i wybiera ten, dla którego działa `import tkinter`, bez zmieniania globalnego `/usr/bin/python3`. W przypadku Kali z Pythonem 3.13 jako domyślnym i pakietem `python3-tk 3.14.7-3` zwykle będzie to `/usr/bin/python3.14`. Skrót na pulpicie zapisuje tę wybraną ścieżkę. Jeśli instalacja była wcześniej przerwana, wykonaj `git pull --ff-only` i ponownie `bash install/setup-gui.sh`. Nie instaluj Tkinter za pomocą `sudo pip`, ponieważ może to uszkodzić zależności systemowe.
 
 Jeżeli `~/.local/bin/bw` już istnieje, ale działa polecenie `bw doctor`, pomiń ponowną instalację `setup-toolkit.sh`; panel GUI nie wymaga wymiany działającego pliku. Nie usuwaj tego pliku bez sprawdzenia jego zawartości.
+
+### Szybka kontrola przy niezgodności wersji
+
+```bash
+/usr/bin/python3 --version
+/usr/bin/python3.14 -c 'import tkinter; print("Tkinter OK:", tkinter.TkVersion)'
+```
+
+Jeżeli druga komenda działa, uruchom najnowszy instalator `bash install/setup-gui.sh` po `git pull --ff-only`. Instalator sam wybierze właściwą wersję. Nie wykonuj `sudo ln -sf /usr/bin/python3.14 /usr/bin/python3`; zmiana globalnej ścieżki interpretera może mieć uboczne skutki.

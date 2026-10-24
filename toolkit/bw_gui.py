@@ -8,10 +8,11 @@ import shutil
 import subprocess
 import threading
 import tkinter as tk
-from tkinter import messagebox, simpledialog, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 
 import bw_servers
 import bw_fleet
+import bw_filezilla
 
 HERE = Path(__file__).resolve().parent
 CLI_FILE = HERE / "bw"
@@ -157,6 +158,7 @@ class AdminApp:
         ttk.Button(manage, text="Dodaj serwis", command=self.add_site).pack(side="left", padx=(0, 6))
         ttk.Button(manage, text="Edytuj platformę", command=self.edit_site).pack(side="left", padx=(0, 6))
         ttk.Button(manage, text="Hosting / dostęp", command=self.edit_hosting).pack(side="left", padx=(0, 6))
+        ttk.Button(manage, text="Import FileZilla", command=self.import_filezilla).pack(side="left", padx=(0, 6))
         ttk.Button(manage, text="Usuń z rejestru", command=self.remove_site).pack(side="left", padx=(0, 6))
         ssh_row = ttk.Frame(tab)
         ssh_row.pack(anchor="w", fill="x", pady=(5, 0))
@@ -272,6 +274,114 @@ class AdminApp:
             self.status.set("Zaktualizowano metadane: " + site["domain"])
         except Exception as exc:
             messagebox.showerror("Nie zaktualizowano", str(exc), parent=self.root)
+
+    def import_filezilla(self):
+        """Import one selected host's safe metadata, with explicit confirmation."""
+        site = self.selected_site()
+        if site is None:
+            return
+        path = filedialog.askopenfilename(
+            parent=self.root, title="Wskaż lokalny eksport FileZilli (nie wysyłaj go)",
+            filetypes=[("Eksport FileZilla XML", "*.xml"), ("Wszystkie pliki", "*.*")]
+        )
+        if not path:
+            return
+        try:
+            entries = bw_filezilla.read_export(path)
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Eksport FileZilla", str(exc), parent=self.root)
+            return
+        if not entries:
+            messagebox.showinfo("Eksport FileZilla",
+                                "Nie znaleziono poprawnych profili z adresami serwerów.",
+                                parent=self.root)
+            return
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Metadane FileZilla → " + site["domain"])
+        dialog.geometry("810x455")
+        dialog.minsize(650, 360)
+        dialog.transient(self.root)
+        dialog.grab_set()
+        frame = ttk.Frame(dialog, padding=15)
+        frame.pack(fill="both", expand=True)
+        ttk.Label(
+            frame,
+            text=f"Wybierz połączenie FileZilli dla domeny {site['domain']}. "
+                 "Importowane są WYŁĄCZNIE adres, protokół, port i login. "
+                 "Żadne hasło nie jest odczytywane ani zapisywane.",
+            wraplength=760
+        ).pack(anchor="w", fill="x", pady=(0, 12))
+        columns = ("name", "host", "access", "user", "port")
+        tree = ttk.Treeview(frame, columns=columns, show="headings", selectmode="browse")
+        for col, label, width in (
+            ("name", "Nazwa FileZilla", 145), ("host", "Host", 230),
+            ("access", "Protokół", 95), ("user", "Login", 155),
+            ("port", "Port", 55)
+        ):
+            tree.heading(col, text=label)
+            tree.column(col, width=width, stretch=col == "host")
+        for index, entry in enumerate(entries):
+            tree.insert("", "end", iid=str(index), values=(
+                entry["name"], entry["host"], entry["access"], entry["user"], entry["port"]
+            ))
+        tree.pack(fill="both", expand=True)
+        buttons = ttk.Frame(frame)
+        buttons.pack(anchor="e", pady=(14, 0))
+        def apply_entry():
+            selected = tree.selection()
+            if not selected:
+                messagebox.showwarning("Wybierz połączenie",
+                                       "Zaznacz wpis FileZilli w tabeli.", parent=dialog)
+                return
+            entry = entries[int(selected[0])]
+            if entry["access"] == "unknown":
+                messagebox.showwarning(
+                    "Nieobsługiwany protokół",
+                    "FileZilla używa tu nieznanego lub nieobsługiwanego protokołu. "
+                    "Sprawdź go ręcznie; nie przypisujemy w ciemno.",
+                    parent=dialog
+                )
+                return
+            current = bw_fleet.hosting_info(site)
+            provider = current["provider"]
+            if provider == "nieustalony":
+                host = entry["host"].lower()
+                if host.endswith(".hosting.ovh.net"):
+                    provider = "OVHcloud"
+                elif host.endswith(".nazwa.pl"):
+                    provider = "nazwa.pl"
+                # Nie rozpoznawaj dostawcy po samym adresie IP.
+            if not messagebox.askyesno(
+                "Zatwierdź lokalny import",
+                f"Przypisać poniższe metadane do {site['domain']}?\n\n"
+                f"Host: {entry['host']}\n"
+                f"Protokół: {entry['access']}\n"
+                f"Port: {entry['port']}\n"
+                f"Login: {entry['user'] or '(brak)'}\n\n"
+                f"Zastąpi to dotychczasowy wpis hostingu: "
+                f"{current['host'] or '(brak)'}. "
+                "Nie zmieni profilu SSH i nie wykona żadnego połączenia. "
+                "SFTP samo w sobie nie oznacza dostępu do powłoki.",
+                parent=dialog
+            ):
+                return
+            try:
+                bw_fleet.update_hosting(
+                    site["domain"], provider, entry["access"], entry["host"],
+                    entry["port"], entry["user"]
+                )
+                dialog.destroy()
+                self.refresh_fleet()
+                self.status.set("Zimportowano metadane FileZilli dla " + site["domain"] +
+                                ", bez haseł i połączenia z serwerem.")
+            except (OSError, ValueError) as exc:
+                messagebox.showerror("Import nieudany", str(exc), parent=dialog)
+
+        ttk.Button(buttons, text="Przypisz do serwisu", command=apply_entry).pack(
+            side="left", padx=(0, 8))
+        ttk.Button(buttons, text="Anuluj", command=dialog.destroy).pack(side="left")
+        dialog.bind("<Escape>", lambda _evt: dialog.destroy())
+        dialog.wait_window()
 
     def edit_hosting(self):
         site = self.selected_site()

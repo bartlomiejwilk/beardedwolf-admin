@@ -1,0 +1,327 @@
+{
+  "schema": 1,
+  "source": "Zestaw T01-T40 dostarczony w rozmowie, 2026-10-24",
+  "note": "Katalog docelowy. status=implemented oznacza dostepny jednorazowy pomiar, a nie pelna walidacje ani gotowy IDS. Pozostale wymagaja dostepu i modulu hostowego / integracji lub procedur.",
+  "checks": [
+    {
+      "id": "T01",
+      "name": "Integralność WordPress Core",
+      "access": "ssh",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T02",
+      "name": "Integralność wtyczek",
+      "access": "ssh",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T03",
+      "name": "Nieznane wtyczki",
+      "access": "ssh",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T04",
+      "name": "Nieznane MU-plugins",
+      "access": "ssh",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T05",
+      "name": "Konta administratorów",
+      "access": "ssh",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T06",
+      "name": "Zmiany ról użytkowników",
+      "access": "ssh",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T07",
+      "name": "Pliki PHP w uploads",
+      "access": "ssh",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T08",
+      "name": "PHP w nietypowych katalogach",
+      "access": "ssh",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T09",
+      "name": "Podejrzane funkcje PHP",
+      "access": "ssh",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T10",
+      "name": "Świeżo zmodyfikowane PHP",
+      "access": "ssh",
+      "priority": "WARNING",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T11",
+      "name": "Podejrzane wp_options",
+      "access": "ssh",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T12",
+      "name": "Autoload",
+      "access": "ssh",
+      "priority": "WARNING",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T13",
+      "name": "Aktywne WP-Cron",
+      "access": "ssh",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T14",
+      "name": "Zmiany .htaccess",
+      "access": "ssh",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T15",
+      "name": ".user.ini / php.ini",
+      "access": "ssh",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T16",
+      "name": "Zmiany wp-config.php",
+      "access": "ssh",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T17",
+      "name": "Nieznane pliki w root",
+      "access": "ssh",
+      "priority": "WARNING",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T18",
+      "name": "Zmiany właściciela/uprawnień",
+      "access": "ssh",
+      "priority": "WARNING",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T19",
+      "name": "WordPress REST Users",
+      "access": "public",
+      "priority": "INFO",
+      "status": "implemented_public_basic",
+      "requires_baseline": false
+    },
+    {
+      "id": "T20",
+      "name": "Zachowanie wp-login.php",
+      "access": "public",
+      "priority": "WARNING",
+      "status": "implemented_public_basic",
+      "requires_baseline": false
+    },
+    {
+      "id": "T21",
+      "name": "Endpoint XML-RPC",
+      "access": "public",
+      "priority": "INFO",
+      "status": "implemented_public_basic",
+      "requires_baseline": false
+    },
+    {
+      "id": "T22",
+      "name": "Losowy nieznany URL",
+      "access": "public",
+      "priority": "CRITICAL",
+      "status": "implemented_public_basic",
+      "requires_baseline": false
+    },
+    {
+      "id": "T23",
+      "name": "Przekierowania HTTP",
+      "access": "public",
+      "priority": "CRITICAL",
+      "status": "implemented_public_basic",
+      "requires_baseline": false
+    },
+    {
+      "id": "T24",
+      "name": "Nagłówki HTTPS",
+      "access": "public",
+      "priority": "INFO",
+      "status": "implemented_public_basic",
+      "requires_baseline": false
+    },
+    {
+      "id": "T25",
+      "name": "TTFB i HTTP 5xx",
+      "access": "public",
+      "priority": "WARNING",
+      "status": "implemented_public_basic",
+      "requires_baseline": false
+    },
+    {
+      "id": "T26",
+      "name": "Wzrost zapytań DB",
+      "access": "integration",
+      "priority": "WARNING",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T27",
+      "name": "Błędy logowania",
+      "access": "logs",
+      "priority": "WARNING",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T28",
+      "name": "Podejrzane User-Agent/IP",
+      "access": "logs",
+      "priority": "INFO",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T29",
+      "name": "PHP CLI kontra WWW",
+      "access": "integration",
+      "priority": "WARNING",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T30",
+      "name": "Wersja PHP",
+      "access": "ssh",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T31",
+      "name": "Rozszerzenia PHP",
+      "access": "ssh",
+      "priority": "INFO",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T32",
+      "name": "auto_prepend_file / auto_append_file",
+      "access": "ssh",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T33",
+      "name": "Procesy i cron systemowy",
+      "access": "ssh",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T34",
+      "name": "DNS",
+      "access": "public",
+      "priority": "CRITICAL",
+      "status": "implemented_public_basic",
+      "requires_baseline": false
+    },
+    {
+      "id": "T35",
+      "name": "TLS",
+      "access": "public",
+      "priority": "WARNING",
+      "status": "implemented_public_basic",
+      "requires_baseline": false
+    },
+    {
+      "id": "T36",
+      "name": "Hash kluczowych plików",
+      "access": "ssh",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T37",
+      "name": "Snapshot struktury katalogów",
+      "access": "ssh",
+      "priority": "WARNING",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T38",
+      "name": "Test odtwarzania backupu",
+      "access": "manual",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T39",
+      "name": "Dziennik zmian WordPress",
+      "access": "integration",
+      "priority": "WARNING",
+      "status": "planned",
+      "requires_baseline": true
+    },
+    {
+      "id": "T40",
+      "name": "Korelacja między serwisami",
+      "access": "aggregate",
+      "priority": "CRITICAL",
+      "status": "planned",
+      "requires_baseline": true
+    }
+  ]
+}

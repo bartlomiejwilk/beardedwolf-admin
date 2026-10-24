@@ -97,7 +97,11 @@ def report_sections(kind, domain):
             sections.append(('Połączenie TLS / certyfikat', f'Niepowodzenie: {exc}'))
     elif kind == 'HTTP':
         url = 'https://' + domain + '/'
-        opener = urllib.request.build_opener()
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                return None
+
+        opener = urllib.request.build_opener(NoRedirect)
         headers = {
             'User-Agent': 'Mozilla/5.0 (compatible; BeardedWolfAdmin/1.0; +local-audit)',
             'Accept': 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8',
@@ -123,6 +127,7 @@ def report_sections(kind, domain):
             ('Adres końcowy', final_url),
             ('Kod HTTP', str(code)),
             ('Content-Type', response_headers.get('Content-Type', 'Brak')),
+            ('Location (jeśli przekierowanie)', response_headers.get('Location', 'Brak')),
         ])
         for key in ('Strict-Transport-Security', 'Content-Security-Policy',
                     'X-Content-Type-Options', 'Referrer-Policy',

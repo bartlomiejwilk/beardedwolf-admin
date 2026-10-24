@@ -51,6 +51,8 @@ class SshTests(unittest.TestCase):
             self.assertIn("Host myserver", content)
             self.assertIn("    AddKeysToAgent yes", content)
             self.assertIn("    ForwardAgent no", content)
+            self.assertIn("id_ed25519_bw_myserver", content)
+            self.assertNotIn("id_ed25519_bw_servers\n", content)
 
 
 class BundleTests(unittest.TestCase):

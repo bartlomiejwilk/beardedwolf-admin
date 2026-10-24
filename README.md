@@ -38,3 +38,20 @@ Ostatnie polecenie moze poprosic o haslo sudo i potwierdzenie pakietow. Jesli ch
 Klucze SSH, token GitHub CLI (zwlaszcza `~/.config/gh/hosts.yml`), pliki .env, hasla, zrzuty baz, materialy dowodowe i raporty poufne nie trafiaja do repozytorium. Kazdy komputer przechowuje swoje sekrety oddzielnie; glownym sejfem pozostaje Bitwarden.
 
 Konfiguracja Syncthing/Restic i kopii USB nie zostala jeszcze wdrozona; dokumentacja opisuje plan, nie stan dzialajacej uslugi.
+
+## Modul WordPress / WWW
+
+Po skonfigurowaniu podstawowego Kali (na kazdym komputerze):
+
+```bash
+cd ~/beardedwolf/repos/beardedwolf-admin
+git pull --ff-only
+bash -n install/setup-web.sh
+bash install/setup-web.sh
+```
+
+Modul instaluje PHP CLI i typowe rozszerzenia, Composer, klienta MariaDB, OpenSSL i `xmllint` z repozytoriow Kali. Nastepnie pobiera WP-CLI w postaci PHAR, weryfikuje jego podpis GPG i sprawdza publiczny klucz po oficjalnym odcisku WP-CLI (63AF7AA15067C05616FDDD88A3A2E8F226F0BC06). WP-CLI trafia do `~/.local/bin/wp`. Jesli w terminalu nie dziala sama komenda `wp`, wywolaj `~/.local/bin/wp --info` lub ustaw PATH dla biezacej sesji: `export PATH="$HOME/.local/bin:$PATH"`.
+
+Skrypt nie skanuje domen ani serwerow, nie loguje przez SSH i nie zmienia zdalnych WordPressow. Zainstalowane narzedzie WP-CLI nie daje automatycznie dostepu do instalacji WordPress na OVH: konieczne sa wlasciwe uprawnienia, konfiguracja SSH i narzedzia po stronie serwera. WP-CLI w tym module nie aktualizuje sie automatycznie przy ponownym wykonaniu skryptu.
+
+Dane poufne, logi i raporty nie trafiaja do GitHub. Raporty nalezy osobno eksportowac do synchronizowanego katalogu Windows, z wyjatkiem materialow, na ktorych synchronizacje nie masz uprawnienia.

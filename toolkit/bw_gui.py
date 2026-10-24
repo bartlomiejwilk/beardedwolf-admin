@@ -25,8 +25,8 @@ class AdminApp:
     def __init__(self, root):
         self.root = root
         self.root.title("BeardedWolf Admin | Centrum diagnostyki")
-        self.root.geometry("890x710")
-        self.root.minsize(720, 570)
+        self.root.geometry("1100x770")
+        self.root.minsize(880, 630)
         self.messages = queue.Queue()
         self.last_report = None
         self.profiles = []
@@ -136,11 +136,13 @@ class AdminApp:
         holder = ttk.Frame(tab)
         holder.pack(fill="both", expand=True)
         self.site_list = ttk.Treeview(holder, show="headings", selectmode="browse",
-                                      columns=("domain", "group", "type", "ssh", "authorized", "last"), height=11)
+                                      columns=("domain", "group", "type", "hosting", "access", "host", "ssh", "authorized", "last"), height=11)
         for col, label, width in [
-            ("domain", "Domena", 195), ("group", "Grupa", 95),
-            ("type", "Platforma", 92), ("ssh", "Profil SSH", 95),
-            ("authorized", "Zakres", 125), ("last", "Ostatnia kontrola", 128)
+            ("domain", "Domena", 165), ("group", "Grupa", 82),
+            ("type", "Platforma", 96), ("hosting", "Hosting", 95),
+            ("access", "Dostęp", 95), ("host", "Host dostępowy", 174),
+            ("ssh", "SSH profil", 74), ("authorized", "Zakres", 107),
+            ("last", "Wynik", 110)
         ]:
             self.site_list.heading(col, text=label)
             self.site_list.column(col, width=width, stretch=col == "domain")
@@ -153,7 +155,8 @@ class AdminApp:
         manage = ttk.Frame(tab)
         manage.pack(anchor="w", fill="x", pady=(8, 0))
         ttk.Button(manage, text="Dodaj serwis", command=self.add_site).pack(side="left", padx=(0, 6))
-        ttk.Button(manage, text="Edytuj serwis", command=self.edit_site).pack(side="left", padx=(0, 6))
+        ttk.Button(manage, text="Edytuj platformę", command=self.edit_site).pack(side="left", padx=(0, 6))
+        ttk.Button(manage, text="Hosting / dostęp", command=self.edit_hosting).pack(side="left", padx=(0, 6))
         ttk.Button(manage, text="Usuń z rejestru", command=self.remove_site).pack(side="left", padx=(0, 6))
         ssh_row = ttk.Frame(tab)
         ssh_row.pack(anchor="w", fill="x", pady=(5, 0))
@@ -196,8 +199,15 @@ class AdminApp:
                     last = bw_fleet.latest_report(site["domain"])["state"]
                 except (OSError, ValueError, KeyError, TypeError):
                     last = "NIEBADANY"
+                hosting = bw_fleet.hosting_info(site)
+                access = {"unknown": "nieustalony", "ftp": "FTP (SSH?)",
+                          "ssh": "SSH", "ftps": "FTPS", "sftp": "SFTP"}.get(
+                              hosting["access"], "nieustalony")
                 self.site_list.insert("", "end", iid=str(index), values=(
-                    site["domain"], site["group"], site["type"], site.get("ssh_alias") or "BRAK",
+                    site["domain"], site["group"],
+                    "nieustalona" if site["type"] == "sprawdzic" else site["type"],
+                    hosting["provider"], access, hosting["host"] or "brak",
+                    site.get("ssh_alias") or "BRAK",
                     "POTWIERDZONY" if site.get("authorized") else "DO POTWIERDZENIA",
                     last
                 ))
@@ -261,6 +271,77 @@ class AdminApp:
             self.status.set("Zaktualizowano metadane: " + site["domain"])
         except Exception as exc:
             messagebox.showerror("Nie zaktualizowano", str(exc), parent=self.root)
+
+    def edit_hosting(self):
+        site = self.selected_site()
+        if site is None:
+            return
+        info = bw_fleet.hosting_info(site)
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Hosting i dostęp: " + site["domain"])
+        dialog.geometry("660x420")
+        dialog.minsize(555, 395)
+        dialog.transient(self.root)
+        dialog.grab_set()
+        frame = ttk.Frame(dialog, padding=16)
+        frame.pack(fill="both", expand=True)
+        frame.columnconfigure(1, weight=1)
+        ttk.Label(frame, text="Domena: " + site["domain"],
+                  font=("Sans", 11, "bold")).grid(
+                      row=0, column=0, columnspan=2, sticky="w", pady=(0, 12))
+
+        provider = tk.StringVar(value=info["provider"])
+        access = tk.StringVar(value=info["access"])
+        host = tk.StringVar(value=info["host"] or "")
+        port = tk.StringVar(value="" if info["port"] is None else str(info["port"]))
+        user = tk.StringVar(value=info["user"] or "")
+
+        ttk.Label(frame, text="Dostawca hostingu:").grid(
+            row=1, column=0, sticky="w", padx=(0, 10), pady=5)
+        ttk.Combobox(frame, textvariable=provider, values=(
+            "nieustalony", "OVHcloud", "nazwa.pl", "cyber_Folks", "inny"
+        )).grid(row=1, column=1, sticky="ew", pady=5)
+        ttk.Label(frame, text="Potwierdzony protokół:").grid(
+            row=2, column=0, sticky="w", padx=(0, 10), pady=5)
+        ttk.Combobox(frame, textvariable=access, state="readonly",
+                     values=("unknown", "ssh", "ftp", "ftps", "sftp")).grid(
+            row=2, column=1, sticky="ew", pady=5)
+        for row, label, variable in [
+            (3, "Adres serwera:", host),
+            (4, "Port:", port),
+            (5, "Login (bez hasła):", user),
+        ]:
+            ttk.Label(frame, text=label).grid(
+                row=row, column=0, sticky="w", padx=(0, 10), pady=5)
+            ttk.Entry(frame, textvariable=variable).grid(
+                row=row, column=1, sticky="ew", pady=5)
+        ttk.Label(
+            frame,
+            text="FTP na porcie 21 nie potwierdza SSH ani szyfrowania transferu. "
+                 "Nie wpisuj hasła do tego formularza. Jeśli SSH nie jest udostępnione, "
+                 "pozostaw profil SSH serwisu nieprzypisany.",
+            wraplength=600
+        ).grid(row=6, column=0, columnspan=2, sticky="ew", pady=(12, 8))
+        buttons = ttk.Frame(frame)
+        buttons.grid(row=7, column=0, columnspan=2, sticky="e", pady=(5, 0))
+
+        def save():
+            try:
+                bw_fleet.update_hosting(
+                    site["domain"], provider.get(), access.get(),
+                    host.get(), port.get(), user.get()
+                )
+                dialog.destroy()
+                self.refresh_fleet()
+                self.status.set("Zaktualizowano hosting: " + site["domain"] +
+                                ". Brak zdalnych działań.")
+            except (OSError, ValueError) as exc:
+                messagebox.showerror("Nie zapisano hostingu", str(exc), parent=dialog)
+
+        ttk.Button(buttons, text="Zapisz", command=save).pack(side="left", padx=(0, 8))
+        ttk.Button(buttons, text="Anuluj", command=dialog.destroy).pack(side="left")
+        dialog.bind("<Escape>", lambda _evt: dialog.destroy())
+        dialog.wait_window()
 
     def remove_site(self):
         site = self.selected_site()

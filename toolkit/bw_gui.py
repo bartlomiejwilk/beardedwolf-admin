@@ -64,6 +64,7 @@ class AdminApp:
         self.root.protocol("WM_DELETE_WINDOW", self.on_app_close)
         self.root.after(120, self.pump)
         self.root.after(900, self.refresh_dashboard)
+        self.root.after(15 * 60 * 1000, self.periodic_dashboard)
 
     def on_app_close(self):
         if any(dialog.get("busy") for dialog in self.wp_dialogs.values()):
@@ -243,6 +244,11 @@ class AdminApp:
                 wp.configure(text="WP: aktualizacje nie sprawdzone przez SSH")
         else:
             wp.configure(text="WordPress: nie dotyczy lub nie rozpoznano")
+
+    def periodic_dashboard(self):
+        # Pomiar cykliczny tylko wtedy, gdy pulpit Kali i aplikacja nadal działają.
+        self.refresh_dashboard()
+        self.root.after(15 * 60 * 1000, self.periodic_dashboard)
 
     def refresh_dashboard(self):
         if self.dashboard_running:

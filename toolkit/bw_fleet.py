@@ -14,6 +14,7 @@ import secrets
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -208,10 +209,40 @@ def public_probe(site):
         if state == "ERROR":
             failures.append(check_id + ": nie udało się wykonać pomiaru")
 
-    # Jedno żądanie HEAD kontroluje nieznany URL, bez skanowania lub enumerowania ścieżek.
+    # Wskazniki HTTP, bez enumeracji zasobow czy odczytu kont z REST API.
+    try:
+        started = time.monotonic()
+        code, target, _headers = probe_url("https://" + domain + "/")
+        millis = int((time.monotonic() - started) * 1000)
+        final_host = urllib.parse.urlsplit(target).hostname or ""
+        observed.append({
+            "id": "T23", "name": "Przekierowania HTTP",
+            "state": "OBSERVED",
+            "details": {"http_status": str(code), "final_host": final_host,
+                        "redirected": str(target != ("https://" + domain + "/"))}
+        })
+        observed.append({
+            "id": "T25", "name": "Odpowiedź serwera i opóźnienie",
+            "state": "OBSERVED",
+            "details": {"http_status": str(code), "response_ms": str(millis)}
+        })
+        if code >= 500:
+            failures.append(f"T25: Serwer zwrócił HTTP {code}")
+        if millis > 3500:
+            failures.append(f"T25: Czas otrzymania nagłówków HTTP {millis} ms (powyżej 3500 ms).")
+        if final_host not in {domain, "www." + domain}:
+            failures.append("T23: Odpowiedź przekierowano na innego hosta: " + final_host)
+    except Exception as exc:
+        for check_id, title in (("T23", "Przekierowania HTTP"), ("T25", "Odpowiedź serwera")):
+            observed.append({"id": check_id, "name": title, "state": "ERROR",
+                             "details": {"Problem": str(exc)}})
+        failures.append("T23/T25: nie udało się wykonać kontroli HTTP")
+
+    # Punktowy HEAD, bez pobierania listy użytkowników ani skanowania portów.
     if site["type"] == "wordpress":
         token = secrets.token_urlsafe(10)
         for check_id, title, path in [
+            ("T19", "REST Users (sam status)", "/wp-json/wp/v2/users"),
             ("T20", "Endpoint logowania WordPress", "/wp-login.php"),
             ("T21", "Endpoint XML-RPC", "/xmlrpc.php"),
             ("T22", "Nieznany URL", "/__bw-audit-" + token),
@@ -239,7 +270,8 @@ def public_probe(site):
             reference = baseline["checks"].get(check["id"])
             if reference is None:
                 changed.append(check["id"] + ": brak tej kontroli w stanie odniesienia")
-            elif reference != check["details"]:
+            elif {k: v for k, v in reference.items() if k != "response_ms"} != {
+                    k: v for k, v in check["details"].items() if k != "response_ms"}:
                 changed.append(check["id"] + ": zmiana względem zatwierdzonego baseline")
     else:
         changed.append("Brak zatwierdzonego baseline: wyniki są tylko obserwacjami.")

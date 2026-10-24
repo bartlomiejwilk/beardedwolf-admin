@@ -98,23 +98,61 @@ def make_ssh_config(profiles):
     return "\n".join(blocks) + "\n\n" + base.lstrip("\n")
 
 
+def save_profiles(profiles):
+    """Zapisz lokalne profile i sekcję SSH, nie dotykając kluczy ani serwerów."""
+    if SSH_CONFIG.is_symlink() or PROFILE_FILE.is_symlink():
+        raise ValueError("Pliki konfiguracyjne są dowiązaniami symbolicznymi; wymagana ręczna kontrola.")
+    if len({p["alias"].lower() for p in profiles}) != len(profiles):
+        raise ValueError("Alias musi być unikatowy.")
+    config = make_ssh_config(profiles)
+    SSH_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    SSH_DIR.chmod(0o700)
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    CONFIG_DIR.chmod(0o700)
+    if SSH_CONFIG.exists():
+        initial = SSH_DIR / "config.beardedwolf.original.bak"
+        if not initial.exists():
+            shutil.copy2(SSH_CONFIG, initial)
+            initial.chmod(0o600)
+        backup = SSH_DIR / "config.beardedwolf.previous.bak"
+        shutil.copy2(SSH_CONFIG, backup)
+        backup.chmod(0o600)
+    if PROFILE_FILE.exists():
+        backup = CONFIG_DIR / "servers.json.previous.bak"
+        shutil.copy2(PROFILE_FILE, backup)
+        backup.chmod(0o600)
+    atomic_save(SSH_CONFIG, config)
+    atomic_save(PROFILE_FILE, json.dumps(profiles, ensure_ascii=False, indent=2) + "\n")
+
+
 def add_profile(alias, host, user, port):
     profile = validate(alias.strip(), host.strip(), user.strip(), port)
     profiles = load_profiles()
     if any(x["alias"].lower() == profile["alias"].lower() for x in profiles):
         raise ValueError("Alias jest już skonfigurowany. Wybierz inną nazwę.")
-    new_profiles = profiles + [profile]
-    config = make_ssh_config(new_profiles)
-    if SSH_CONFIG.is_symlink() or PROFILE_FILE.is_symlink():
-        raise ValueError("Pliki konfiguracyjne są dowiązaniami symbolicznymi; wymagana ręczna kontrola.")
-    if SSH_CONFIG.exists():
-        backup = SSH_DIR / "config.beardedwolf.original.bak"
-        if not backup.exists():
-            shutil.copy2(SSH_CONFIG, backup)
-            backup.chmod(0o600)
-    atomic_save(SSH_CONFIG, config)
-    atomic_save(PROFILE_FILE, json.dumps(new_profiles, ensure_ascii=False, indent=2) + "\n")
+    save_profiles(profiles + [profile])
     return profile
+
+
+def update_profile(alias, host, user, port):
+    """Edytuj adres, login i port, zachowując alias i przypisany klucz SSH."""
+    profiles = load_profiles()
+    index = next((i for i, p in enumerate(profiles) if p["alias"] == alias), None)
+    if index is None:
+        raise ValueError(f"Profil {alias} nie istnieje.")
+    updated = validate(alias, host.strip(), user.strip(), port)
+    profiles[index] = updated
+    save_profiles(profiles)
+    return updated
+
+
+def delete_profile(alias):
+    """Usuń tylko lokalny profil i alias SSH; nie kasuj żadnych kluczy."""
+    profiles = load_profiles()
+    remaining = [p for p in profiles if p["alias"] != alias]
+    if len(remaining) == len(profiles):
+        raise ValueError(f"Profil {alias} nie istnieje.")
+    save_profiles(remaining)
 
 
 def terminal(args, *, title="BeardedWolf SSH", use_agent=False):

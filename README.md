@@ -69,3 +69,11 @@ Komendy tekstowe: `bw http example.org`, `bw suite example.org`, `bw suite examp
 ### Serwery SSH: edycja i usuwanie
 
 W zakladce **Serwery SSH** kliknij istniejacy profil, aby zaladowac go do formularza. Mozesz zmienic host, login i port, a potem wybrac **Zapisz zmiany**. Alias zostaje bez zmian, bo jest powiazany z kluczem SSH. **Usun zaznaczony** usuwa jedynie profil lokalny, nigdy klucze SSH ani `authorized_keys` na serwerze. Przed edycja lub usunieciem narzedzie zapisuje kopie poprzedniej konfiguracji.
+
+## Zarzadzanie wieloma serwisami (inwentaryzacja i kontrole T01-T40)
+
+Nowa zakladka **Wszystkie serwisy** w panelu XFCE pozwala dodawac i edytowac serwisy, potwierdzac zakres testow, uruchamiac pasywne kontrole wybranej domeny lub calej potwierdzonej grupy, otwierac raporty i zatwierdzac baseline. Startowy katalog zawiera 22 domeny/subdomeny i wymaga weryfikacji. Plik uzytkownika: `~/.config/beardedwolf/sites.json`. Raporty sa przechowywane lokalnie w `~/beardedwolf/raporty/FLEET/` i nie sa domyslnie synchronizowane.
+
+Katalog `config/checks.json` zawiera T01-T40. Obecnie dziala **9 podstawowych kontroli publicznych**; pozostale 31 nie sa jeszcze wykonywane, wymagaja m.in. wlasciwego dostepu SSH i lokalizacji WordPress. Zaden niewykonany test nie jest prezentowany jako OK.
+
+Po `git pull --ff-only` i ponownym uruchomieniu panelu widoczna bedzie nowa zakladka. Testy lokalne: `python3 -m unittest discover -s tests -v`. Szczegoly ograniczen, uprawnien i plan wdrozenia: [docs/flota-serwisow.md](docs/flota-serwisow.md).

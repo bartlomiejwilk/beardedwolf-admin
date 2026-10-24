@@ -1,0 +1,47 @@
+# BeardedWolf Admin: ignorowane dane lokalne i poufne
+# Nie dodawaj sekretow do Git nawet w prywatnym repozytorium.
+
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Klucze i uwierzytelnianie
+id_ed25519
+id_ed25519.pub
+id_rsa
+id_rsa.pub
+*.pem
+*.p12
+*.pfx
+*.key
+hosts.yml
+*credentials*
+*secrets*
+*token*
+
+# Wyniki diagnostyki, materialy dowodowe i dane robocze
+Raporty/
+raporty/
+reports/
+evidence/
+dowody/
+*.pcap
+*.pcapng
+*.sql
+*.sql.gz
+*.dump
+*.sqlite
+*.db
+
+# Artefakty i pliki systemowe
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+__pycache__/
+.venv/
+node_modules/

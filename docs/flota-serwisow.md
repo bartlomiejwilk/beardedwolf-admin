@@ -69,7 +69,7 @@ Dla Parkowej znany jest login FTP `parkowd`, jednak nie zapisujemy go w plikach 
 
 Przy pierwszym otwarciu nowej wersji lokalny `~/.config/beardedwolf/sites.json` zostanie **jednorazowo rozszerzony o brakujące pola hostingu**, z zachowaniem starych profili SSH, uprawnień i baseline. Automatyczny zapis tworzy kopię `~/.config/beardedwolf/sites.json.previous.bak`. Jeśli pole `hosting` było już zdefiniowane, nie zostanie nadpisane.
 
-Panel prezentuje dostępne pola hostingu oraz pozwala je ręcznie edytować. Nie próbuje automatycznie połączyć się FTP, SFTP, SSH ani używać niezabezpieczonego FTP na porcie 21. Aby uzyskać zaszyfrowany transfer, sprawdź w panelu **OVHcloud → Hosting → FTP–SSH**, czy dla danego użytkownika dostępne jest **SFTP** (i czy dla pakietu można aktywować SSH); samo FTP nie potwierdza ani SSH, ani SFTP.
+Panel prezentuje dostępne pola hostingu oraz pozwala je ręcznie edytować. Po zaznaczeniu PTTK można użyć przycisku **Utwórz profil SSH**: panel wykorzysta znany host `ssh.cluster128.hosting.ovh.net`, ale zapyta o rzeczywisty login użytkownika SSH. Bez tego loginu nie utworzy profilu. Profil i powiązanie będą zapisane wyłącznie lokalnie, bez próby logowania. Potem klucz SSH można skonfigurować w zakładce **Serwery SSH**. Nie próbuje automatycznie połączyć się FTP, SFTP, SSH ani używać niezabezpieczonego FTP na porcie 21. Aby uzyskać zaszyfrowany transfer, sprawdź w panelu **OVHcloud → Hosting → FTP–SSH**, czy dla danego użytkownika dostępne jest **SFTP** (i czy dla pakietu można aktywować SSH); samo FTP nie potwierdza ani SSH, ani SFTP.
 
 ## Jak uruchamiać
 

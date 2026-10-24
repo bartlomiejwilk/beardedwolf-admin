@@ -819,6 +819,16 @@ class AdminApp:
         if profile is None:
             return
         alias = profile["alias"]
+        linked = [site["domain"] for site in bw_fleet.inventory()["sites"]
+                  if site.get("ssh_alias") == alias]
+        if linked:
+            messagebox.showwarning(
+                "Profil jest używany przez serwisy",
+                "Najpierw zmień powiązania SSH tych serwisów:\n" + "\n".join(linked) +
+                "\n\nUsunięcie profilu teraz pozostawiłoby nieaktywne odwołania.",
+                parent=self.root
+            )
+            return
         if not messagebox.askyesno(
             "Usuń lokalny profil SSH",
             f"Usunąć profil '{alias}' z BeardedWolf Admin i sekcji SSH? "

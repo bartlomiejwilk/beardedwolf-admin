@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import threading
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox, simpledialog, ttk
 
 import bw_servers
 import bw_fleet
@@ -101,7 +101,13 @@ class AdminApp:
         scrollbar = ttk.Scrollbar(holder, orient="vertical", command=self.site_list.yview)
         self.site_list.configure(yscrollcommand=scrollbar.set)
         self.site_list.pack(side="left", fill="both", expand=True)
+        self.site_list.bind("<Double-1>", lambda _evt: self.edit_site())
         scrollbar.pack(side="right", fill="y")
+        manage = ttk.Frame(tab)
+        manage.pack(anchor="w", fill="x", pady=(8, 0))
+        ttk.Button(manage, text="Dodaj serwis", command=self.add_site).pack(side="left", padx=(0, 6))
+        ttk.Button(manage, text="Edytuj serwis", command=self.edit_site).pack(side="left", padx=(0, 6))
+        ttk.Button(manage, text="Usuń z rejestru", command=self.remove_site).pack(side="left", padx=(0, 6))
         line1 = ttk.Frame(tab)
         line1.pack(anchor="w", fill="x", pady=(10, 4))
         ttk.Button(line1, text="Potwierdź zakres", command=self.confirm_site).pack(side="left", padx=(0, 6))
@@ -149,6 +155,69 @@ class AdminApp:
                                    parent=self.root)
             return None
         return self.managed_sites[int(selected[0])]
+
+    def add_site(self):
+        domain = simpledialog.askstring("Nowy serwis", "Domena (bez https://):",
+                                        parent=self.root)
+        if not domain:
+            return
+        group = simpledialog.askstring("Grupa", "Grupa (np. prywatne, jdk, um):",
+                                       parent=self.root, initialvalue="prywatne")
+        if not group:
+            return
+        platform = simpledialog.askstring(
+            "Platforma", "Typ: wordpress, aplikacja, przekierowanie lub sprawdzic:",
+            parent=self.root, initialvalue="sprawdzic"
+        )
+        if not platform:
+            return
+        try:
+            bw_fleet.add_site(domain.strip().lower(), group, platform.strip().lower())
+            self.refresh_fleet()
+            self.status.set("Dodano serwis bez autoryzacji testów: " + domain)
+        except Exception as exc:
+            messagebox.showerror("Nie dodano serwisu", str(exc), parent=self.root)
+
+    def edit_site(self):
+        site = self.selected_site()
+        if site is None:
+            return
+        group = simpledialog.askstring(
+            "Grupa serwisu " + site["domain"], "Grupa:",
+            parent=self.root, initialvalue=site["group"]
+        )
+        if group is None:
+            return
+        platform = simpledialog.askstring(
+            "Platforma serwisu", "Typ: wordpress, aplikacja, przekierowanie lub sprawdzic:",
+            parent=self.root, initialvalue=site["type"]
+        )
+        if platform is None:
+            return
+        try:
+            bw_fleet.update_site(site["domain"], group, platform.strip().lower())
+            self.refresh_fleet()
+            self.status.set("Zaktualizowano metadane: " + site["domain"])
+        except Exception as exc:
+            messagebox.showerror("Nie zaktualizowano", str(exc), parent=self.root)
+
+    def remove_site(self):
+        site = self.selected_site()
+        if site is None:
+            return
+        if not messagebox.askyesno(
+            "Usuń z rejestru",
+            f"Usunąć {site['domain']} z lokalnej inwentaryzacji? "
+            "Raporty, baseline i klucze SSH zostaną na dysku. Nie zmieniamy serwera.",
+            parent=self.root
+        ):
+            return
+        try:
+            bw_fleet.remove_site(site["domain"])
+            self.refresh_fleet()
+            self.status.set("Usunięto serwis z rejestru: " + site["domain"])
+        except Exception as exc:
+            messagebox.showerror("Nie usunięto", str(exc), parent=self.root)
 
     def confirm_site(self):
         site = self.selected_site()

@@ -55,3 +55,7 @@ Modul instaluje PHP CLI i typowe rozszerzenia, Composer, klienta MariaDB, OpenSS
 Skrypt nie skanuje domen ani serwerow, nie loguje przez SSH i nie zmienia zdalnych WordPressow. Zainstalowane narzedzie WP-CLI nie daje automatycznie dostepu do instalacji WordPress na OVH: konieczne sa wlasciwe uprawnienia, konfiguracja SSH i narzedzia po stronie serwera. WP-CLI w tym module nie aktualizuje sie automatycznie przy ponownym wykonaniu skryptu.
 
 Dane poufne, logi i raporty nie trafiaja do GitHub. Raporty nalezy osobno eksportowac do synchronizowanego katalogu Windows, z wyjatkiem materialow, na ktorych synchronizacje nie masz uprawnienia.
+
+## Polecenie `bw`: diagnostyka i raporty
+
+Pierwsza wersja narzedzia: [docs/bw.md](docs/bw.md). Po `git pull --ff-only` wykonaj `bash install/setup-toolkit.sh` i `~/.local/bin/bw doctor`. Dostepne kontrole: `bw dns <domena>` oraz `bw tls <domena>` z raportami HTML. Eksport do Syncthing wymaga **jawnego** `--sync`.

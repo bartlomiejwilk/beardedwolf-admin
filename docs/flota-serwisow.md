@@ -22,9 +22,32 @@ Pozostałe **31 kontroli** znajduje się w `config/checks.json` ze statusem `pla
 
 Plik startowy `config/sites.json` obejmuje 22 domeny i subdomeny z wcześniejszych prac. To **wstępny katalog**, a nie formalne potwierdzenie uprawnień ani zapewnienie, że wszystkie domeny nadal są aktywne. Przy pierwszym uruchomieniu moduł kopiuje go do lokalnego `~/.config/beardedwolf/sites.json`. Nie synchronizuje i nie nadpisuje późniejszych zmian użytkownika.
 
-Każdy wpis ma grupę (`prywatne`, `jdk`, `um`, itp.), typ (`wordpress`, `aplikacja`, `przekierowanie`, `sprawdzic`) i pole `authorized`, domyślnie **false**. W przyszłości będzie można indywidualnie połączyć serwis z właściwym aliasem SSH i katalogiem WordPressa. Na razie pola `ssh_alias` i `wp_root` pozostają nieustalone i nie są wykorzystywane.
+Każdy wpis ma grupę (`prywatne`, `jdk`, `um`, itp.), typ (`wordpress`, `aplikacja`, `przekierowanie`, `sprawdzic`) i pole `authorized`, domyślnie **false**. Lokalny rejestr przechowuje ponadto przypisany alias SSH (`ssh_alias`) oraz opcjonalny katalog serwisu na serwerze (`wp_root`). Powiązania mogą zostać uzupełnione przez użytkownika w interfejsie, ale samo ich zapisanie nie wykonuje żadnego połączenia SSH i nie oznacza autoryzacji testów hostowych.
 
 W panelu GUI jest zakładka **Wszystkie serwisy**: edycja rejestru, potwierdzenie zakresu uprawnień, wstrzymanie testów, skan jednego albo wszystkich potwierdzonych serwisów, otwarcie raportu, zatwierdzenie baseline. Dwuklik na serwisie pozwala zmienić metadane. Usunięcie z rejestru nie kasuje raportów, kluczy i kont.
+
+## Powiązania stron z SSH i ścieżkami instalacji
+
+W zakładce **Wszystkie serwisy** zaznacz serwis i wybierz **Przypisz SSH / katalog**. W oknie ustaw lokalny profil z zakładki **Serwery SSH** (`jaslo`, `jdk` itd.) oraz ewentualnie zweryfikowaną, **bezwzględną ścieżkę Linux** do katalogu z instalacją WordPress, np. `/home/jaslo/beardedwolf`. Zapis jest lokalny w `~/.config/beardedwolf/sites.json`. Pole może być puste, jeśli ścieżka jest nieznana lub serwis nie korzysta z WordPressa. Zapisany alias musi istnieć lokalnie; nie można przypisać nieistniejącego profilu SSH.
+
+**Sugerowane powiązania OVH**: przycisk pokazuje listę wszystkich przypisań **przed zapisem** i wymaga osobnego potwierdzenia. Podpowiedzi dotyczą wyłącznie:
+
+| Domena | Sugerowany alias |
+|---|---|
+| `beardedwolf.pl` | `jaslo` |
+| `art.beardedwolf.pl` | `jaslo` |
+| `labdostepnosci.pl` | `jaslo` |
+| `szeptogra.pl` | `jaslo` |
+| `jdkjaslo.pl` | `jdk` |
+| `kino.jdkjaslo.pl` | `jdk` |
+
+Podpowiedź jest dostępna tylko wtedy, gdy lokalny profil istnieje. Nie nadpisuje wcześniej przypisanych hostów. **Nie przypisujemy automatycznie** hostingu UM Jasło, serwisów zewnętrznych, domen przekierowujących ani tych, dla których nie znamy jednoznacznie lokalizacji. Aliasy `jaslo` i `jdk` to nazwy profili z PC-Wilk, a nie obowiązkowe nazwy na innych komputerach. Na Lenovo powiązanie należy wykonać z użyciem aliasów tam zdefiniowanych.
+
+Przycisk **Połącz z SSH strony** otwiera interaktywną sesję terminala dla przypisanego profilu po potwierdzeniu. Nie wykonuje komend na serwerze automatycznie. Usunięcie przypisania następuje przez wybór `(brak)` i wyczyszczenie pola katalogu. Powiązanie może być osierocone, jeśli profil SSH usunięto z innego narzędzia; wtedy trzeba przypisać aktualny profil, nie odtwarzamy go w ciemno.
+
+**Ważne:** sam alias nie wystarcza do uruchomienia hostowych T01–T18, T26–T33 i T36–T39. Wymagają jeszcze autoryzacji użycia narzędzi na danej instalacji, sprawdzenia poprawnego połączenia kluczem SSH, weryfikacji ścieżki na serwerze i wdrożenia odczytowego modułu audytowego. Nie kopiujemy kluczy prywatnych ani plików `wp-config.php` na lokalny komputer.
+
+Przy tej aktualizacji wprowadzono również **sortowanie tabel** w zakładkach Serwery SSH, Wszystkie serwisy oraz Kontrole T01–T40. Kliknięcie nagłówka sortuje rosnąco, kolejne malejąco, bez zmiany danych ani identyfikatorów przypisanych do wybranego wiersza.
 
 ## Jak uruchamiać
 

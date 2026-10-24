@@ -62,6 +62,6 @@ Pierwsza wersja narzedzia: [docs/bw.md](docs/bw.md). Po `git pull --ff-only` wyk
 
 ## Graficzny panel testow i SSH
 
-Na Kali z uruchomionym pulpitem XFCE: `git pull --ff-only` i `bash install/setup-gui.sh`. Instalator doda ikone **BeardedWolf Admin** do pulpitu i menu Kali. Aplikacja pozwala wybrac testy DNS/TLS/HTTPS i jednym kliknieciem utworzyc zbiorczy raport HTML, domyslnie lokalny. Druga zakladka zarzadza lokalnymi profilami SSH, odrebnym kluczem serwerowym i jednorazowym dodawaniem klucza na serwer. Uwierzytelnianie kluczem + keychain pozwala potem laczyc sie bez kazdorazowego wpisywania hasla serwera. Szczegoly i zasady bezpieczenstwa: [docs/panel-gui.md](docs/panel-gui.md).
+Na Kali z uruchomionym pulpitem XFCE: `git pull --ff-only` i `bash install/setup-gui.sh`. Instalator doda ikone **BeardedWolf Admin** do pulpitu i menu Kali. Aplikacja pozwala wybrac testy DNS/TLS/HTTPS i jednym kliknieciem utworzyc zbiorczy raport HTML, domyslnie lokalny. Druga zakladka zarzadza lokalnymi profilami SSH, oddzielnym kluczem SSH dla każdego serwera i jednorazowym dodawaniem klucza na serwer. Uwierzytelnianie kluczem + keychain pozwala potem laczyc sie bez kazdorazowego wpisywania hasla serwera. Szczegoly i zasady bezpieczenstwa: [docs/panel-gui.md](docs/panel-gui.md).
 
 Komendy tekstowe: `bw http example.org`, `bw suite example.org`, `bw suite example.org --sync` (ostatnia jawnie eksportuje raport do Syncthing). Nie sa to testy penetracyjne ani pelny audyt podatnosci.

@@ -74,8 +74,10 @@ class WordpressTests(unittest.TestCase):
         }), patch.object(bw_wp, "remote", return_value="Success") as remote:
             result = bw_wp.update_core(SITE, "6.9.0", "6.9.1")
             self.assertIn("Success", result)
-            self.assertEqual(remote.call_args.args[1],
+            self.assertEqual(remote.call_args_list[0].args[1],
                              ["core", "update", "--version=6.9.1"])
+            self.assertEqual(remote.call_args_list[1].args[1],
+                             ["core", "update-db"])
 
     def test_unsupported_target_rejected(self):
         with self.assertRaises(ValueError):

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """BeardedWolf Admin: graficzny panel diagnostyki i połączeń SSH (Kali XFCE)."""
 import importlib.util
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib.machinery import SourceFileLoader
 from pathlib import Path
 import queue
@@ -13,6 +14,8 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 import bw_servers
 import bw_fleet
 import bw_filezilla
+import bw_monitor
+import bw_wp
 
 HERE = Path(__file__).resolve().parent
 CLI_FILE = HERE / "bw"
@@ -32,6 +35,11 @@ class AdminApp:
         self.last_report = None
         self.profiles = []
         self.managed_sites = []
+        self.dashboard_results = {}
+        self.dashboard_cards = {}
+        self.dashboard_running = False
+        self.wp_cache = {}
+        self.wp_dialogs = {}
         self.fleet_running = False
         self.last_fleet_report = None
         self.table_sort = {}
@@ -49,10 +57,12 @@ class AdminApp:
         self.username = tk.StringVar()
         self.port = tk.StringVar(value="22")
         self.status = tk.StringVar(value="Gotowy do pracy. Wybierz test lub serwer.")
+        self.dashboard_filter = tk.StringVar(value="Wszystkie")
 
         self.build()
         self.refresh_servers()
         self.root.after(120, self.pump)
+        self.root.after(900, self.refresh_dashboard)
 
     def build(self):
         frame = ttk.Frame(self.root, padding=14)
@@ -65,16 +75,21 @@ class AdminApp:
 
         tabs = ttk.Notebook(frame)
         tabs.pack(fill="both", expand=True)
+        dashboard = ttk.Frame(tabs, padding=14)
         tests = ttk.Frame(tabs, padding=14)
         servers = ttk.Frame(tabs, padding=14)
         fleet = ttk.Frame(tabs, padding=14)
         controls = ttk.Frame(tabs, padding=14)
         reports = ttk.Frame(tabs, padding=14)
+        tabs.add(dashboard, text="  Pulpit  ")
         tabs.add(fleet, text="  Wszystkie serwisy  ")
         tabs.add(tests, text="  Testy domen  ")
         tabs.add(servers, text="  Serwery SSH  ")
         tabs.add(controls, text="  Kontrole T01–T40  ")
         tabs.add(reports, text="  Raporty i informacje  ")
+        self.tabs = tabs
+        self.fleet_tab = fleet
+        self.build_dashboard(dashboard)
         self.build_fleet(fleet)
         self.build_controls(controls)
         self.build_tests(tests)
@@ -84,6 +99,175 @@ class AdminApp:
         ttk.Separator(frame).pack(fill="x", pady=(10, 8))
         ttk.Label(frame, textvariable=self.status, wraplength=820).pack(
             anchor="w", fill="x")
+
+    def build_dashboard(self, tab):
+        header = ttk.Frame(tab)
+        header.pack(fill="x", pady=(0, 9))
+        ttk.Label(header, text="Stan zarządzanych serwisów",
+                  font=("Sans", 14, "bold")).pack(side="left")
+        ttk.Button(header, text="Odśwież stan WWW i TLS",
+                   command=self.refresh_dashboard).pack(side="right", padx=(7, 0))
+        groups = ["Wszystkie"] + sorted({s.get("group", "inne")
+                                        for s in bw_fleet.inventory()["sites"]})
+        combo = ttk.Combobox(header, textvariable=self.dashboard_filter,
+                             values=groups, width=15, state="readonly")
+        combo.pack(side="right")
+        combo.bind("<<ComboboxSelected>>", lambda _event: self.draw_dashboard())
+        ttk.Label(header, text="Grupa:").pack(side="right", padx=(6, 4))
+        self.dashboard_hint = tk.StringVar(
+            value="Wyniki na żywo tylko dla serwisów z zatwierdzonym zakresem. "
+                  "Aktualizacje WordPress wymagają osobnego sprawdzenia przez SSH.")
+        ttk.Label(tab, textvariable=self.dashboard_hint, wraplength=850).pack(
+            anchor="w", fill="x", pady=(0, 8))
+        content = ttk.Frame(tab)
+        content.pack(fill="both", expand=True)
+        self.dashboard_canvas = tk.Canvas(content, highlightthickness=0, borderwidth=0)
+        scroll = ttk.Scrollbar(content, orient="vertical",
+                               command=self.dashboard_canvas.yview)
+        self.dashboard_canvas.configure(yscrollcommand=scroll.set)
+        scroll.pack(side="right", fill="y")
+        self.dashboard_canvas.pack(side="left", fill="both", expand=True)
+        self.dashboard_inner = ttk.Frame(self.dashboard_canvas)
+        self.dashboard_window = self.dashboard_canvas.create_window(
+            (0, 0), window=self.dashboard_inner, anchor="nw"
+        )
+        self.dashboard_inner.bind(
+            "<Configure>",
+            lambda _event: self.dashboard_canvas.configure(
+                scrollregion=self.dashboard_canvas.bbox("all")
+            )
+        )
+        self.dashboard_canvas.bind("<Configure>", self.resize_dashboard)
+        self.draw_dashboard()
+
+    def resize_dashboard(self, event):
+        self.dashboard_canvas.itemconfigure(self.dashboard_window, width=event.width)
+        cols = 3 if event.width >= 1120 else (2 if event.width >= 650 else 1)
+        if getattr(self, "dashboard_columns", None) != cols:
+            self.dashboard_columns = cols
+            self.draw_dashboard()
+
+    def draw_dashboard(self):
+        for widget in self.dashboard_inner.winfo_children():
+            widget.destroy()
+        self.dashboard_cards = {}
+        sites = bw_fleet.inventory()["sites"]
+        filter_name = self.dashboard_filter.get()
+        if filter_name != "Wszystkie":
+            sites = [s for s in sites if s.get("group") == filter_name]
+        cols = getattr(self, "dashboard_columns", 2)
+        for col in range(cols):
+            self.dashboard_inner.columnconfigure(col, weight=1, uniform="cards")
+        for idx, site in enumerate(sites):
+            domain = site["domain"]
+            card = ttk.LabelFrame(self.dashboard_inner, text=domain, padding=11)
+            card.grid(row=idx // cols, column=idx % cols, sticky="nsew", padx=5, pady=5)
+            status = ttk.Label(card, font=("Sans", 11, "bold"))
+            status.pack(anchor="w", pady=(0, 5))
+            http = ttk.Label(card)
+            http.pack(anchor="w", pady=2)
+            tls = ttk.Label(card)
+            tls.pack(anchor="w", pady=2)
+            checked = ttk.Label(card)
+            checked.pack(anchor="w", pady=2)
+            wp = ttk.Label(card)
+            wp.pack(anchor="w", pady=(2, 7))
+            ttk.Label(
+                card, text=site.get("group", "") + " | " +
+                ("platforma nieustalona" if site.get("type") == "sprawdzic"
+                 else site.get("type", "")), wraplength=360
+            ).pack(anchor="w")
+            buttons = ttk.Frame(card)
+            buttons.pack(anchor="w", pady=(8, 0))
+            ttk.Button(buttons, text="Szczegóły",
+                       command=lambda d=domain: self.open_site_details(d)).pack(
+                side="left", padx=(0, 5))
+            if site.get("type") == "wordpress":
+                ttk.Button(
+                    buttons, text="Aktualizacje WP",
+                    command=lambda d=domain: self.open_wp_dialog(d)
+                ).pack(side="left")
+            self.dashboard_cards[domain] = (status, http, tls, checked, wp, site)
+            self.paint_dashboard_card(domain)
+
+    def paint_dashboard_card(self, domain):
+        controls = self.dashboard_cards.get(domain)
+        if not controls:
+            return
+        status, http, tls, checked, wp, site = controls
+        data = self.dashboard_results.get(domain)
+        if not site.get("authorized"):
+            status.configure(text="○ Niepotwierdzony zakres")
+            http.configure(text="WWW: nie sprawdzono")
+            tls.configure(text="TLS: nie sprawdzono")
+            checked.configure(text="Ostatni pomiar: brak")
+        elif data is None:
+            status.configure(text="○ Oczekuje na kontrolę")
+            http.configure(text="WWW: nie sprawdzono")
+            tls.configure(text="TLS: nie sprawdzono")
+            checked.configure(text="Ostatni pomiar: brak")
+        else:
+            status.configure(text=bw_monitor.display_status(data))
+            http.configure(
+                text="HTTP: " + str(data["http"] if data.get("http") is not None else "błąd") +
+                "  |  " + (str(data["response_ms"]) + " ms"
+                           if data.get("response_ms") is not None else "czas nieznany")
+            )
+            extra = (" (do " + data["tls_expires"] + ", " +
+                     str(data["tls_days"]) + " dni)" if data.get("tls_expires") else "")
+            tls.configure(text="TLS: " + data.get("tls", "brak") + extra)
+            checked.configure(text="Sprawdzono UTC: " + data.get("checked_at", "")[:19])
+        if site.get("type") == "wordpress":
+            recent = self.wp_cache.get(domain)
+            if recent:
+                wp.configure(
+                    text=f"WP: Core {'aktualizacja' if recent['core_update'] else 'OK'}"
+                         f"  |  wtyczki do aktualizacji: {recent['plugin_count']}"
+                )
+            else:
+                wp.configure(text="WP: aktualizacje nie sprawdzone przez SSH")
+        else:
+            wp.configure(text="WordPress: nie dotyczy lub nie rozpoznano")
+
+    def refresh_dashboard(self):
+        if self.dashboard_running:
+            return
+        sites = [s for s in bw_fleet.inventory()["sites"] if s.get("authorized")
+                 and s.get("public_checks")]
+        if not sites:
+            self.dashboard_hint.set(
+                "Brak serwisów zatwierdzonych do testów publicznych. "
+                "Potwierdź zakres w zakładce Wszystkie serwisy."
+            )
+            return
+        self.dashboard_running = True
+        self.dashboard_hint.set(f"Sprawdzam WWW i TLS dla {len(sites)} serwisów...")
+        threading.Thread(target=self.dashboard_worker, args=(sites,), daemon=True).start()
+
+    def dashboard_worker(self, sites):
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            futures = {pool.submit(bw_monitor.check, s["domain"]): s["domain"]
+                       for s in sites}
+            for future in as_completed(futures):
+                domain = futures[future]
+                try:
+                    result = future.result()
+                except Exception as exc:
+                    result = {"domain": domain, "status": "BŁĄD POMIARU",
+                              "tls": "NIE SPRAWDZONO", "http": None,
+                              "checked_at": "", "error": str(exc)[:150]}
+                self.messages.put(("dashboard_site", domain, result))
+        self.messages.put(("dashboard_finished", len(sites)))
+
+    def open_site_details(self, domain):
+        for iid in self.site_list.get_children():
+            if self.site_list.set(iid, "domain") == domain:
+                self.site_list.selection_set(iid)
+                self.site_list.focus(iid)
+                self.site_list.see(iid)
+                self.tabs.select(self.fleet_tab)
+                self.status.set("Wybrano serwis: " + domain)
+                return
 
     def sort_table(self, tree, column):
         """Sortuj widok bez zmiany powiązań identyfikatorów i danych."""
@@ -952,6 +1136,17 @@ class AdminApp:
                 elif event[0] == "connection":
                     self.status.set(event[1])
                     messagebox.showinfo("Test SSH", event[1], parent=self.root)
+                elif event[0] == "dashboard_site":
+                    _, domain, data = event
+                    self.dashboard_results[domain] = data
+                    self.paint_dashboard_card(domain)
+                elif event[0] == "dashboard_finished":
+                    self.dashboard_running = False
+                    self.dashboard_hint.set(
+                        f"Sprawdzono {event[1]} serwisów. "
+                        "HTTP i TLS to nie pełny audyt bezpieczeństwa. "
+                        "WordPress sprawdzaj osobno przez SSH."
+                    )
                 elif event[0] == "fleet_done":
                     results = event[1]
                     self.refresh_fleet()

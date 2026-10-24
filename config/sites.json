@@ -1,0 +1,248 @@
+{
+  "schema": 1,
+  "note": "Inwentaryzacja wstepna na podstawie dotychczasowych prac; wymaga potwierdzenia zakresu uprawnien i platform. Zadna strona nie ma przypisanego automatycznie SSH ani sciezki WordPress.",
+  "sites": [
+    {
+      "id": "bartlomiejwilk.pl",
+      "domain": "bartlomiejwilk.pl",
+      "group": "prywatne",
+      "type": "sprawdzic",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "beardedwolf.pl",
+      "domain": "beardedwolf.pl",
+      "group": "prywatne",
+      "type": "wordpress",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "art.beardedwolf.pl",
+      "domain": "art.beardedwolf.pl",
+      "group": "prywatne",
+      "type": "wordpress",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "carpathian.art",
+      "domain": "carpathian.art",
+      "group": "prywatne",
+      "type": "sprawdzic",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "emcom.rzeszow.pl",
+      "domain": "emcom.rzeszow.pl",
+      "group": "zewnetrzne",
+      "type": "sprawdzic",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "jaslo.org.pl",
+      "domain": "jaslo.org.pl",
+      "group": "organizacje",
+      "type": "sprawdzic",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "jasloiregion.pl",
+      "domain": "jasloiregion.pl",
+      "group": "organizacje",
+      "type": "sprawdzic",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "jaslopttk.pl",
+      "domain": "jaslopttk.pl",
+      "group": "organizacje",
+      "type": "sprawdzic",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "labdostepnosci.pl",
+      "domain": "labdostepnosci.pl",
+      "group": "prywatne",
+      "type": "wordpress",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "mariuszskiba.com",
+      "domain": "mariuszskiba.com",
+      "group": "prywatne",
+      "type": "przekierowanie",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "nzozmedykjaslo.pl",
+      "domain": "nzozmedykjaslo.pl",
+      "group": "zewnetrzne",
+      "type": "sprawdzic",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "parkowajaslo.pl",
+      "domain": "parkowajaslo.pl",
+      "group": "zewnetrzne",
+      "type": "sprawdzic",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "rksr.pl",
+      "domain": "rksr.pl",
+      "group": "organizacje",
+      "type": "sprawdzic",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "starycmentarzjaslo.pl",
+      "domain": "starycmentarzjaslo.pl",
+      "group": "organizacje",
+      "type": "sprawdzic",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "szeptogra.pl",
+      "domain": "szeptogra.pl",
+      "group": "prywatne",
+      "type": "aplikacja",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "bip.jdkjaslo.pl",
+      "domain": "bip.jdkjaslo.pl",
+      "group": "jdk",
+      "type": "przekierowanie",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "jdkjaslo.pl",
+      "domain": "jdkjaslo.pl",
+      "group": "jdk",
+      "type": "wordpress",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "kino.jdkjaslo.pl",
+      "domain": "kino.jdkjaslo.pl",
+      "group": "jdk",
+      "type": "wordpress",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "um.jaslo.pl",
+      "domain": "um.jaslo.pl",
+      "group": "um",
+      "type": "wordpress",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "inkubatorjaslo.pl",
+      "domain": "inkubatorjaslo.pl",
+      "group": "um",
+      "type": "sprawdzic",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "hufiec.jaslo.org.pl",
+      "domain": "hufiec.jaslo.org.pl",
+      "group": "organizacje",
+      "type": "sprawdzic",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    },
+    {
+      "id": "canis-lupus.pl",
+      "domain": "canis-lupus.pl",
+      "group": "prywatne",
+      "type": "sprawdzic",
+      "public_checks": true,
+      "authorized": false,
+      "ssh_alias": null,
+      "wp_root": null,
+      "notes": "Wymaga potwierdzenia zakresu administracji i uzgodnienia testow hostowych."
+    }
+  ]
+}

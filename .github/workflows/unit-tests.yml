@@ -1,0 +1,26 @@
+name: BeardedWolf Admin - tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get sources
+        uses: actions/checkout@v4
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Validate Python syntax
+        run: |
+          python -m py_compile toolkit/bw toolkit/bw_gui.py toolkit/bw_servers.py toolkit/bw_fleet.py toolkit/bw_discover.py toolkit/bw_filezilla.py toolkit/bw_monitor.py toolkit/bw_wp.py
+      - name: Run offline tests
+        run: python -m unittest discover -s tests -v

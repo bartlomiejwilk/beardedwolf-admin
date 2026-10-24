@@ -10,6 +10,8 @@ from importlib.machinery import SourceFileLoader
 import json
 import os
 from pathlib import Path
+from pathlib import PurePosixPath
+import bw_servers
 import secrets
 import subprocess
 import sys
@@ -37,6 +39,18 @@ HEADERS = {
     "Accept-Language": "pl-PL,pl;q=0.9,en;q=0.7",
 }
 ALLOWED_TYPES = {"wordpress", "aplikacja", "przekierowanie", "sprawdzic"}
+
+# Powiązania znane z wcześniejszej konfiguracji kont OVH. TYLKO podpowiedzi.
+# Nie przypisujemy hostingu automatycznie, nie zapisujemy ścieżek bez weryfikacji.
+SSH_SUGGESTIONS = {
+    "beardedwolf.pl": "jaslo",
+    "art.beardedwolf.pl": "jaslo",
+    "labdostepnosci.pl": "jaslo",
+    "szeptogra.pl": "jaslo",
+    "jdkjaslo.pl": "jdk",
+    "kino.jdkjaslo.pl": "jdk",
+}
+
 
 
 def atomic_json(path, value):
@@ -129,6 +143,73 @@ def remove_site(domain):
         raise ValueError("Nie znaleziono serwisu: " + domain)
     payload["sites"] = retained
     atomic_json(SITES_FILE, payload)
+
+
+def validate_wp_root(value):
+    """Katalog serwisu zdalnego: ścieżka Linux, nie polecenie powłoki."""
+    if value is None or not str(value).strip():
+        return None
+    value = str(value).strip()
+    if (len(value) > 700 or not value.startswith("/") or
+            any(ord(char) < 32 or ord(char) == 127 for char in value) or
+            any(part in ("..", ".") for part in value.split("/")) or
+            value.startswith("//") or "\x00" in value):
+        raise ValueError("Podaj bezwzględną ścieżkę katalogu Linux bez '..' i znaków sterujących")
+    return str(PurePosixPath(value))
+
+
+def assign_ssh(domain, alias=None, wp_root=None):
+    """Zapis mapowania lokalnie. Nie wykonuj SSH ani testów hostowych."""
+    domain = base.domain_name(domain)
+    alias = alias.strip() if isinstance(alias, str) else None
+    if not alias:
+        alias = None
+    path = validate_wp_root(wp_root)
+    if alias is None and path:
+        raise ValueError("Katalog WordPress wymaga przypisanego profilu SSH.")
+    if alias is not None:
+        available = {p["alias"] for p in bw_servers.load_profiles()}
+        if alias not in available:
+            raise ValueError("Nie znaleziono lokalnego profilu SSH: " + alias)
+    payload = inventory()
+    for site in payload["sites"]:
+        if site["domain"] == domain:
+            site["ssh_alias"] = alias
+            site["wp_root"] = path
+            atomic_json(SITES_FILE, payload)
+            return {"domain": domain, "ssh_alias": alias, "wp_root": path}
+    raise ValueError("Brak domeny w lokalnej inwentaryzacji: " + domain)
+
+
+def suggestion_preview():
+    """Wskazówki dla istniejących profili i tylko nieprzypisanych serwisów."""
+    active_profiles = {p["alias"] for p in bw_servers.load_profiles()}
+    sites = {s["domain"]: s for s in inventory()["sites"]}
+    result = []
+    for domain, alias in SSH_SUGGESTIONS.items():
+        site = sites.get(domain)
+        if site and alias in active_profiles and not site.get("ssh_alias"):
+            result.append((domain, alias))
+    return result
+
+
+def apply_suggestions():
+    """Świadomie wywoływane po potwierdzeniu w GUI; nigdy nie nadpisuje mapowań."""
+    preview = suggestion_preview()
+    if not preview:
+        return []
+    payload = inventory()
+    assigned = []
+    for site in payload["sites"]:
+        suggestion = next((alias for domain, alias in preview
+                           if site["domain"] == domain), None)
+        if suggestion and not site.get("ssh_alias"):
+            site["ssh_alias"] = suggestion
+            site["wp_root"] = None
+            assigned.append((site["domain"], suggestion))
+    if assigned:
+        atomic_json(SITES_FILE, payload)
+    return assigned
 
 
 def set_authorized(domain, authorized):

@@ -335,6 +335,14 @@ class AdminApp:
         plugin_btn.configure(state="disabled")
         core_btn.configure(state="disabled")
         def finish():
+            current = self.wp_dialogs.get(domain)
+            if current and current["busy"]:
+                messagebox.showwarning(
+                    "Operacja w toku", "Nie zamykaj okna podczas sprawdzania lub aktualizacji "
+                    "na serwerze. Poczekaj na wynik procesu.",
+                    parent=dialog
+                )
+                return
             self.wp_dialogs.pop(domain, None)
             dialog.destroy()
         dialog.protocol("WM_DELETE_WINDOW", finish)
@@ -421,9 +429,9 @@ class AdminApp:
         ).start()
 
     def wp_update_worker(self, domain, kind, chosen, report, target):
+        results = []
         try:
             site = bw_fleet.get_site(domain)
-            results = []
             if kind == "plugins":
                 for entry in chosen:
                     output = bw_wp.update_plugin(

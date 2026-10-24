@@ -83,3 +83,7 @@ Po `git pull --ff-only` i ponownym uruchomieniu panelu widoczna bedzie nowa zakl
 W zakladce **Wszystkie serwisy** jest przycisk **Przypisz SSH / katalog**. Pozwala wskazac jeden z rzeczywiscie zapisanych lokalnie profili SSH (np. `jaslo`, `jdk`) i opcjonalny zweryfikowany katalog WWW/WordPress na serwerze. **Sugerowane powiazania OVH** pokazuje szesc znanych przypisan przed potwierdzeniem, nie nadpisuje juz istniejacych. Bez aktywnego lokalnego profilu nie zapisze mapowania. Przycisk **Polacz z SSH strony** otwiera sesje po oddzielnym potwierdzeniu, nie wykonuje automatycznych testow hostowych. Profile SSH nadal pozostaja tylko na danym komputerze. Szczegoly: [docs/flota-serwisow.md](docs/flota-serwisow.md).
 
 Klikniecie naglowka kolumny w tabelach **Wszystkie serwisy**, **Serwery SSH** i **Kontrole T01-T40** zmienia sortowanie rosnaco/malejaco bez zmiany zapamietanego przypisania wierszy do obiektow.
+
+## Dostawcy hostingowi i dostep FTP / SSH
+
+Lista serwisow wyswietla teraz osobno **platforme**, **hosting**, **potwierdzony dostep** i **adres serwera**. Przycisk **Hosting / dostep** edytuje lokalnie te dane bez podawania hasel. W dokumentacji [flota-serwisow.md](docs/flota-serwisow.md) zapisano nowe potwierdzenia: PTTK (OVH cluster128, SSH, login nieustalony), UM (nazwa.pl), Jasloiregion (cyber_Folks), NZOZ i Parkowa (OVH cluster130, dostep FTP, SSH niepotwierdzone). Nie utozsamiamy FTP z SSH/SFTP. Starsze rejestry sa rozszerzane tylko o brakujace pola, z kopia zapasowa i zachowaniem mapowania SSH.

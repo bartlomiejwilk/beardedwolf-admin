@@ -285,7 +285,7 @@ def public_probe(site):
             failures.append(f"T25: Serwer zwrócił HTTP {code}")
         if millis > 3500:
             failures.append(f"T25: Czas otrzymania nagłówków HTTP {millis} ms (powyżej 3500 ms).")
-        if final_host not in {domain, "www." + domain}:
+        if final_host not in {domain, "www." + domain} and site["type"] != "przekierowanie":
             failures.append("T23: Odpowiedź przekierowano na innego hosta: " + final_host)
     except Exception as exc:
         for check_id, title in (("T23", "Przekierowania HTTP"), ("T25", "Odpowiedź serwera")):

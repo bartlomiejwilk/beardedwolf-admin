@@ -39,6 +39,7 @@ class AdminApp:
         self.dashboard_cards = {}
         self.dashboard_running = False
         self.wp_cache = {}
+        self.wp_errors = {}
         self.wp_dialogs = {}
         self.wp_batch_running = False
         self.fleet_running = False
@@ -243,6 +244,8 @@ class AdminApp:
                     text=f"WP: Core {'aktualizacja' if recent['core_update'] else 'OK'}"
                          f"  |  wtyczki do aktualizacji: {recent['plugin_count']}"
                 )
+            elif domain in self.wp_errors:
+                wp.configure(text="WP: BŁĄD SPRAWDZENIA SSH/WP-CLI")
             else:
                 wp.configure(text="WP: aktualizacje nie sprawdzone przez SSH")
         else:
@@ -1403,9 +1406,13 @@ class AdminApp:
                 elif event[0] == "wp_batch_site":
                     _, domain, data, error = event
                     if error:
+                        self.wp_cache.pop(domain, None)
+                        self.wp_errors[domain] = error
+                        self.paint_dashboard_card(domain)
                         self.dashboard_hint.set("Nie sprawdzono aktualizacji " + domain +
                                                 ": " + error)
                     else:
+                        self.wp_errors.pop(domain, None)
                         self.wp_cache[domain] = data
                         self.paint_dashboard_card(domain)
                 elif event[0] == "wp_batch_finished":
@@ -1420,10 +1427,14 @@ class AdminApp:
                     record = self.wp_dialogs.get(domain)
                     if record:
                         if error:
+                            self.wp_cache.pop(domain, None)
+                            self.wp_errors[domain] = error
+                            self.paint_dashboard_card(domain)
                             record["status"].set("Nie udało się sprawdzić: " + error)
                             record["data"] = None
                             record["details"].set("Core: status nieznany")
                         else:
+                            self.wp_errors.pop(domain, None)
                             self.wp_cache[domain] = data
                             record["data"] = data
                             record["details"].set(

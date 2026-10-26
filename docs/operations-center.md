@@ -155,3 +155,27 @@ zainstalowanej FileZilli, jesli operator chce otwierac jej sesje.
 Konfiguracje WinSCP/PuTTY sa kopiowane do backupu, ale automatyczne
 otwieranie z panelu dotyczy obecnie FileZilli i Windows OpenSSH.
 Danych urzedowych nie nalezy automatycznie przenosic na prywatny PC.
+
+
+## Powiazania domen z aktualnymi logowaniami oraz SSH bez aliasu
+
+Nowa zakladka **Powiazania** (osiagalna takze przyciskiem w zakladce
+**Logowania Windows**) odczytuje biezacy rejestr domen, lokalne profile
+SSH BeardedWolf i aktualna liste FileZilla z Windows. Wpisy usuniete przez
+operatora z FileZilli nie sa pobierane ze starych eksportow.
+
+Po wyborze domeny i zapisanej sesji operator moze zatwierdzic przypisanie.
+Dla SSH zapisuje sie `ssh_alias` bez usuwania danych FTP. Dla FTP/SFTP
+zapisuje sie host, port, login i protokol w sekcji `hosting`, a profil
+SSH zostaje nienaruszony. Zmiana SSH na inny serwer zeruje poprzednia
+sciezke WordPress, bo moglaby wskazywac zly serwer. Hasla sa uzywane przez
+oryginalna FileZille i nie sa importowane do rejestru ani synchronizowane.
+
+Przycisk **Test SSH bez aliasu** wykonuje jeden jawnie potwierdzony test
+Windows OpenSSH z `-F none -p PORT -l LOGIN HOST exit`, bez hasla, z
+`BatchMode=yes` i walidacja znanego klucza hosta. W trybie bez aliasu
+specyficzne opcje `IdentityFile` przypisane aliasowi nie obowiazuja.
+Odrzucone klucze nie oznaczaja nieaktywnego konta. Przyciskiem **Otworz
+wybrane logowanie** mozna wykonac interaktywny test haslem w Windows
+SSH albo uruchomic FileZille z jej zapisanym kontem SFTP/FTP.
+Nie uruchamia sie prob na innych serwerach niz wybrane przez operatora.

@@ -277,8 +277,18 @@ def main():
         print("Wymagane potwierdzenie: dodaj --yes po sprawdzeniu działania Syncthing.")
         print("Katalog:", root)
         return
-    if _config() is not None:
-        raise RuntimeError("Synchronizacja jest już skonfigurowana na tym komputerze.")
+    previous = _config()
+    if previous is not None:
+        configured = Path(previous["root"]).expanduser().resolve()
+        requested = Path(root).expanduser().resolve()
+        if configured != requested:
+            print("Synchronizacja jest już aktywna z INNYM folderem:", configured)
+            print("Nie zmieniono konfiguracji. Nowy folder:", requested)
+        else:
+            print("Synchronizacja jest już włączona na tym komputerze.")
+            print(status())
+            print("Nie wykonano ponownej publikacji ani przyjęcia danych.")
+        return
     import bw_fleet
     import bw_servers
     # Initialize/migrate only local inventory, before enabling shared storage.

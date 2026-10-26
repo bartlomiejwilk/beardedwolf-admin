@@ -82,3 +82,25 @@ Zmiana domeny, hostingu, powiązania profilu albo parametrów SSH jest od razu z
 Nie zmieniaj tych samych wpisów równocześnie na obu komputerach. Jeśli Syncthing utworzy plik o nazwie zawierającej .sync-conflict-, BeardedWolf zatrzyma odczyty i zapisy, zamiast po cichu wybrać wersję. Porównaj obie wersje, wykonaj kopię, scal prawidłowe zmiany i dopiero rozwiąż konflikt.
 
 Jeśli wspólny folder zniknie lub zostanie odmontowany, aplikacja zgłosi błąd. Nie przełącza się po cichu na przestarzałą lokalną konfigurację. Kopia lokalna pozostaje do odzyskiwania danych. **Syncthing nie zastępuje backupu**, warto włączyć wersjonowanie plików i niezależne kopie. Zadbaj o ochronę obu dysków; nawet bez haseł lista serwerów i loginy techniczne są informacją wrażliwą organizacyjnie.
+
+
+### Tryb terminalowy, gdy pulpit Win-KeX nie działa
+
+Nie musisz uruchamiać XFCE ani BeardedWolf Admin GUI. Otwórz PowerShell Windows, wpisz polecenie wsl -d kali-linux, a następnie **wewnątrz terminala Kali**:
+
+    cd ~/beardedwolf/repos/beardedwolf-admin
+    git status --short
+    git pull --ff-only
+    python3 -m unittest discover -s tests -v
+    python3 toolkit/bw_sync.py detect
+    python3 toolkit/bw_sync.py status
+
+Na PC-Wilk, po sprawdzeniu, że folder Sync jest tym właściwym i nie ma wcześniejszego stanu Admin, wykonaj:
+
+    python3 toolkit/bw_sync.py publish --yes
+
+Na Lenovo, **dopiero gdy Syncthing dostarczył oba pliki z PC-Wilk**, wykonaj:
+
+    python3 toolkit/bw_sync.py adopt --yes
+
+Program zachowuje stare lokalne pliki jako kopie. Nie używaj publish na Lenovo, jeśli docelową konfiguracją są dane PC-Wilk. Nawet gdy program wypisze potwierdzenie, trzeba osobno sprawdzić status obu urządzeń i kompletność folderu w Syncthing. Nie odblokowuje to sesji SSH, jeśli na Lenovo brakuje własnych kluczy.

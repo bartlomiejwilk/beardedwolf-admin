@@ -7,6 +7,7 @@ import shutil
 import shlex
 import subprocess
 import tempfile
+import bw_sync
 
 CONFIG_DIR = Path.home() / ".config" / "beardedwolf"
 PROFILE_FILE = CONFIG_DIR / "servers.json"
@@ -39,12 +40,32 @@ def validate(alias, host, user, port):
 
 
 def load_profiles():
-    if not PROFILE_FILE.exists():
+    shared = bw_sync.active_file("servers.json")
+    source = shared or PROFILE_FILE
+    if not source.exists():
         return []
-    data = json.loads(PROFILE_FILE.read_text(encoding="utf-8"))
+    data = json.loads(source.read_text(encoding="utf-8"))
     if not isinstance(data, list):
         raise ValueError("Nieprawidłowy plik profili SSH")
-    return [validate(x["alias"], x["host"], x["user"], x["port"]) for x in data]
+    profiles = [validate(x["alias"], x["host"], x["user"], x["port"]) for x in data]
+    if shared is not None:
+        # Recreate only the BeardedWolf-owned SSH configuration section on this
+        # machine. The IdentityFile paths are machine-local; keys are never synced.
+        desired = make_ssh_config(profiles)
+        current = SSH_CONFIG.read_text(encoding="utf-8") if SSH_CONFIG.exists() else ""
+        if desired != current:
+            if SSH_CONFIG.is_symlink():
+                raise RuntimeError("~/.ssh/config jest dowiązaniem symbolicznym.")
+            SSH_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+            SSH_DIR.chmod(0o700)
+            if SSH_CONFIG.is_file():
+                backup = SSH_DIR / "config.beardedwolf.previous.bak"
+                if backup.is_symlink():
+                    raise RuntimeError("Kopia SSH config jest dowiązaniem symbolicznym.")
+                shutil.copy2(SSH_CONFIG, backup)
+                backup.chmod(0o600)
+            atomic_save(SSH_CONFIG, desired)
+    return profiles
 
 
 def atomic_save(path, content):
@@ -122,7 +143,8 @@ def save_profiles(profiles):
         shutil.copy2(PROFILE_FILE, backup)
         backup.chmod(0o600)
     atomic_save(SSH_CONFIG, config)
-    atomic_save(PROFILE_FILE, json.dumps(profiles, ensure_ascii=False, indent=2) + "\n")
+    destination = bw_sync.active_file("servers.json") or PROFILE_FILE
+    atomic_save(destination, json.dumps(profiles, ensure_ascii=False, indent=2) + "\n")
 
 
 def add_profile(alias, host, user, port):

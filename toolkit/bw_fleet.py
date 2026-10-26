@@ -15,6 +15,7 @@ from pathlib import Path
 from pathlib import PurePosixPath
 import bw_servers
 import bw_discover
+import bw_sync
 import secrets
 import subprocess
 import sys
@@ -57,11 +58,30 @@ SSH_SUGGESTIONS = {
 
 
 
+def active_sites_file():
+    """Live shared inventory when explicitly enabled, otherwise original local data."""
+    return bw_sync.active_file("sites.json") or SITES_FILE
+
+
 def atomic_json(path, value):
+    # Preserve the existing call sites, but make shared Syncthing data authoritative.
+    is_inventory = path == SITES_FILE
+    destination = active_sites_file() if is_inventory else path
+    if is_inventory and destination != SITES_FILE:
+        value = bw_sync.safe_sites(value)
+        # Local machine-only rollback copy of the previous shared revision.
+        if destination.is_file():
+            backup = SITES_FILE.with_name("sites.json.shared.previous.bak")
+            backup.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            if backup.is_symlink():
+                raise RuntimeError("Nie nadpisuję kopii będącej dowiązaniem symbolicznym.")
+            shutil.copy2(destination, backup)
+            backup.chmod(0o600)
+    path = destination
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     if path.is_symlink():
         raise RuntimeError(f"Nie zapisuję do dowiązania symbolicznego: {path}")
-    if path == SITES_FILE and path.is_file():
+    if is_inventory and path == SITES_FILE and path.is_file():
         backup = path.with_name("sites.json.previous.bak")
         if backup.is_symlink():
             raise RuntimeError("Kopia rejestru serwisów jest dowiązaniem symbolicznym")
@@ -122,11 +142,23 @@ def hosting_info(site):
 
 
 def inventory():
-    if not SITES_FILE.exists():
+    file = active_sites_file()
+    if not file.exists():
+        if file != SITES_FILE:
+            raise RuntimeError("Brak udostępnionej inwentaryzacji. Sprawdź Syncthing.")
         defaults = json.loads(INITIAL_SITES.read_text(encoding="utf-8"))
         atomic_json(SITES_FILE, defaults)
-    payload = json.loads(SITES_FILE.read_text(encoding="utf-8"))
+    payload = json.loads(file.read_text(encoding="utf-8"))
     rows = payload["sites"]
+    if file != SITES_FILE:
+        # Free-form notes may contain sensitive information and remain only local.
+        try:
+            local_rows = json.loads(SITES_FILE.read_text(encoding="utf-8"))["sites"]
+            notes = {s["domain"]: s.get("notes", "") for s in local_rows}
+        except (OSError, KeyError, ValueError, TypeError):
+            notes = {}
+        for row in rows:
+            row["notes"] = notes.get(row["domain"], "")
     defaults = hosting_defaults()
     migrated = False
     for site in rows:

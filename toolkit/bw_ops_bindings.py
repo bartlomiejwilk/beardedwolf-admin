@@ -28,7 +28,7 @@ def _provider(host):
 
 def build(app):
     tab = ttk.Frame(app.tabs, padding=16)
-    app.tabs.add(tab, text="  Przypisz dostepy  ")
+    app.tabs.add(tab, text="  Powiazania  ")\n    app.mapping_tab = tab
     ttk.Label(tab, text="Powiaz domeny z zapisanymi polaczeniami",
               font=("DejaVu Sans", 14, "bold")).pack(anchor="w")
     ttk.Label(tab, text=(
@@ -38,7 +38,7 @@ def build(app):
     ), wraplength=1100).pack(anchor="w", fill="x", pady=(3, 10))
     control = ttk.Frame(tab)
     control.pack(fill="x", pady=(0, 9))
-    ttk.Button(control, text="Odswiez domény i FileZille",
+    ttk.Button(control, text="Odswiez domeny i FileZille",
                command=lambda: refresh(app)).pack(side="left")
     app.mapping_summary = tk.StringVar(value="")
     ttk.Label(control, textvariable=app.mapping_summary).pack(side="left", padx=(14, 0))

@@ -28,6 +28,7 @@ import urllib.request
 ROOT = Path(__file__).resolve().parents[1]
 SETTINGS = Path.home() / ".config" / "beardedwolf"
 SITES_FILE = SETTINGS / "sites.json"
+DEFAULT_SITES_FILE = SITES_FILE
 CATALOG_FILE = ROOT / "config" / "checks.json"
 INITIAL_SITES = ROOT / "config" / "sites.json"
 HOSTING_DEFAULTS = ROOT / "config" / "hosting-defaults.json"
@@ -59,7 +60,9 @@ SSH_SUGGESTIONS = {
 
 
 def active_sites_file():
-    """Live shared inventory when explicitly enabled, otherwise original local data."""
+    """Live shared inventory, except when a caller explicitly overrides local path."""
+    if SITES_FILE != DEFAULT_SITES_FILE:
+        return SITES_FILE
     return bw_sync.active_file("sites.json") or SITES_FILE
 
 

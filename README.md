@@ -110,3 +110,8 @@ BeardedWolf Admin potrafi korzystać z jednego rejestru domen i metadanych SSH w
 Pierwsze włączenie wymaga działania i sparowania Syncthing na obu Windows. W zakładce **Synchronizacja** na PC-Wilk użyj **Wykryj Windows**, a następnie **PC-Wilk: opublikuj moje ustawienia**. Na Lenovo, po faktycznym dostarczeniu obu plików przez Syncthing, użyj **Lenovo: przyjmij dane z Syncthing**. Dotychczasowe lokalne rejestry zostają jako kopie zapasowe. Aplikacja nie nadpisuje istniejącego folderu ze stanem, zgłasza konflikty Syncthing i nie obiecuje połączenia SSH, gdy na drugim komputerze brakuje osobnego klucza.
 
 Szczegółowa instrukcja: [docs/synchronizacja.md](docs/synchronizacja.md).
+
+
+## Porządkowanie inwentaryzacji
+
+W panelu **Wszystkie serwisy** dostępne są wyszukiwanie i filtr grup, a w zakładce **Do wyjaśnienia** kontrola spójności danych bez połączeń sieciowych. Zgłaszane są błędne przypisania profili SSH do różnych klastrów OVH, brakujące profile, niezweryfikowane katalogi WordPress i podejrzane powiązania domen przekierowujących. **Nie następuje automatyczna zmiana zapisanych profili ani uprawnień.** Aplikacja blokuje wyraźnie błędne powiązania z innym klastrem podczas ręcznych połączeń SSH i operacji WP-CLI; różne nazwy w obrębie tego samego klastra są akceptowane. Status „TESTY DOZWOLONE” dotyczy jedynie zakresu pasywnych testów, a nie poprawności hostingu lub SSH.

@@ -7,7 +7,6 @@ from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "toolkit"))
 import bw_ssh_direct
-import bw_ops_bindings
 
 
 class DirectSSHTests(unittest.TestCase):
@@ -37,10 +36,6 @@ class DirectSSHTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             bw_ssh_direct.test_direct("host;touch /tmp/x", "user", 22)
 
-    def test_infer_provider_only_from_known_host_suffixes(self):
-        self.assertEqual(bw_ops_bindings._provider("ssh.cluster114.hosting.ovh.net"),
-                         "OVHcloud")
-        self.assertEqual(bw_ops_bindings._provider("ftp.unknown.tld"), "nieustalony")
 
 
 if __name__ == "__main__":

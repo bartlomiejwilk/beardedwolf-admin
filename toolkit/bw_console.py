@@ -146,3 +146,53 @@ def build(app, tab):
     ttk.Label(actions, text="Problemy pierwsze, przekierowania ostatnie.",
               foreground=COLORS["muted"]).pack(side="right")
     draw(app)
+
+
+def draw(app):
+    """Redraw 22-100 records cheaply; preserve selection and show redirects last."""
+    if not hasattr(app, "dashboard_table"):
+        return
+    tree = app.dashboard_table
+    selection = tree.selection()
+    prior = tree.set(selection[0], "domain") if selection else None
+    try:
+        sites = bw_fleet.inventory()["sites"]
+    except (OSError, ValueError, RuntimeError) as exc:
+        app.dashboard_hint.set("Nie można odczytać rejestru: " + str(exc))
+        return
+    groups = ["Wszystkie"] + sorted({s.get("group", "inne") for s in sites})
+    app.dashboard_group_combo.configure(values=groups)
+    if app.dashboard_filter.get() not in groups:
+        app.dashboard_filter.set("Wszystkie")
+    term = app.dashboard_search.get().strip().casefold()
+    selected_group = app.dashboard_filter.get()
+    shown = [s for s in sites if
+             (selected_group == "Wszystkie" or s.get("group") == selected_group)
+             and (not term or term in s["domain"].casefold())]
+    shown.sort(key=lambda s: bw_overview.order(
+        s, app.dashboard_results.get(s["domain"])))
+    for item in tree.get_children():
+        tree.delete(item)
+    for site in shown:
+        domain = site["domain"]
+        label, severity, code, tls, latency = bw_overview.presentation(
+            site, app.dashboard_results.get(domain)
+        )
+        tree.insert("", "end", iid=domain, tags=(severity,), values=(
+            domain, label, code, tls, latency,
+            site.get("group", ""), site.get("type", "")
+        ))
+    if prior and tree.exists(prior):
+        tree.selection_set(prior)
+        tree.see(prior)
+    totals = bw_overview.metrics(sites, app.dashboard_results)
+    for widget, count in zip(
+        app.console_stats,
+        (totals["healthy"], totals["alerts"], totals["unchecked"], totals["redirects"])
+    ):
+        widget.set(str(count))
+
+
+def paint(app, domain):
+    """Single call site for old pump; ordering always follows newest measurements."""
+    draw(app)

@@ -170,6 +170,12 @@ def confirm_path(app):
                                "Katalog można przypisać po skonfigurowaniu SSH.",
                                parent=app.root)
         return
+    mismatch = bw_integrity.profile_endpoint_check(
+        site, bw_servers.load_profiles()
+    )
+    if mismatch and mismatch[0] == "BŁĄD":
+        messagebox.showerror("Niezgodny serwer", mismatch[1], parent=app.root)
+        return
     if not messagebox.askyesno(
         "Zatwierdzenie katalogu WordPress",
         "Domena: %s\nProfil: %s\nKatalog: %s\n\n"

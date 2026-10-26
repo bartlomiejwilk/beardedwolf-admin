@@ -122,3 +122,36 @@ dawnych aliasow, wyłącznie na danym komputerze (OSTROZNIE):
 
 Uzycie przyciskow SSH i operacji WP-CLI dla wstrzymanych profili jest
 zablokowane. Komputer Lenovo zachowuje swoj odrebny stan lokalny.
+
+## Natychmiastowy eksport rzeczywistych dostepow Windows
+
+Prywatny backup jest niezalezny od eksportu JSON z samymi metadanymi.
+
+1. W Windows PowerShell uruchom lokalny skrypt:
+   `install/export-windows-private.ps1`
+2. Powstaje osobny katalog `Documents/BeardedWolf-AccessAudit/PRIVATE-KOMPUTER-data/`
+   z oryginalnymi `FileZilla/sitemanager.xml`, `Windows-OpenSSH/`
+   (config i klucze), oraz jesli istnieja `PuTTY.reg`,
+   `WinSCP.reg` i `WinSCP.ini`.
+3. **Katalog zawiera SEKRETY**, wiec nie wysylaj go do czatu,
+   repozytorium GitHub ani do Syncthing. Windows ACL ogranicza dostep;
+   sam katalog NIE jest zaszyfrowany. Przenos go tylko na dysku BitLocker
+   i po uwzglednieniu ograniczen organizacyjnych.
+4. Hasel chronionych FileZilla master password ani DPAPI WinSCP
+   ten backup nie odszyfrowuje. Oryginalne programy moga ich nadal uzywac
+   w oryginalnym koncie Windows.
+
+W zakladce **Logowania Windows** BeardedWolf odczytuje istniejace nazwy
+połączeń FileZilla i aliasy z `.ssh/config`. Dwuklik na FileZilla
+uruchamia oryginalny zapisany wpis klienta Windows z zachowaniem
+jego dotychczasowej konfiguracji uwierzytelnienia. Dwuklik na SSH
+uruchamia Windows ssh.exe, ktory korzysta z tego samego lokalnego konta,
+kluczy i ssh-agent co dotychczas. Nie potrzeba kopiowac zadnego hasla
+do kodu programu. Jest to integracja z istniejacymi programami
+Windows, a nie niezalezny magazyn hasel BeardedWolf.
+
+**Ograniczenia:** nowa funkcja wymaga Windows z WSL interoperability i
+zainstalowanej FileZilli, jesli operator chce otwierac jej sesje.
+Konfiguracje WinSCP/PuTTY sa kopiowane do backupu, ale automatyczne
+otwieranie z panelu dotyczy obecnie FileZilli i Windows OpenSSH.
+Danych urzedowych nie nalezy automatycznie przenosic na prywatny PC.

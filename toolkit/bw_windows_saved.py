@@ -35,9 +35,16 @@ def _folder_title(node):
 
 
 def _site_title(node):
+    """Read both FileZilla variants: <Name> or trailing text after last field."""
     child = node.find("Name")
-    return ((child.text or "").strip() if child is not None else ""
-            ) or (node.text or "").strip()
+    if child is not None and (child.text or "").strip():
+        return child.text.strip()
+    # Some exported FileZilla entries store the display name as the tail
+    # of the last XML field, e.g. </SyncBrowsing>My site</Server>.
+    for field in reversed(list(node)):
+        if (field.tail or "").strip():
+            return field.tail.strip()
+    return (node.text or "").strip()
 
 
 def _escape_segment(name):

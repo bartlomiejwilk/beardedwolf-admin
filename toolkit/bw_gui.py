@@ -18,6 +18,8 @@ import bw_monitor
 import bw_wp
 import bw_sync
 import bw_integrity
+import bw_theme
+import bw_overview
 
 HERE = Path(__file__).resolve().parent
 CLI_FILE = HERE / "bw"
@@ -31,8 +33,8 @@ class AdminApp:
     def __init__(self, root):
         self.root = root
         self.root.title("BeardedWolf Admin | Centrum diagnostyki")
-        self.root.geometry("1370x850")
-        self.root.minsize(980, 660)
+        self.root.geometry("1450x890")
+        self.root.minsize(1100, 690)
         self.messages = queue.Queue()
         self.last_report = None
         self.profiles = []
@@ -70,7 +72,10 @@ class AdminApp:
         self.port = tk.StringVar(value="22")
         self.status = tk.StringVar(value="Gotowy do pracy. Wybierz test lub serwer.")
         self.dashboard_filter = tk.StringVar(value="Wszystkie")
+        self.dashboard_search = tk.StringVar(value="")
+        self.overview_stats = tk.StringVar(value="")
 
+        bw_theme.apply(self.root)
         self.build()
         self.refresh_servers()
         self.root.protocol("WM_DELETE_WINDOW", self.on_app_close)

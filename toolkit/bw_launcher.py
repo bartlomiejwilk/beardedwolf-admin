@@ -7,9 +7,14 @@ import tkinter as tk
 import bw_gui
 import bw_console
 import bw_theme
+import bw_ops_access
 
 
 class OperationsApp(bw_gui.AdminApp):
+    def build(self):
+        super().build()
+        bw_ops_access.build(self)
+
     def build_dashboard(self, tab):
         self.dashboard_search = tk.StringVar(value="")
         bw_console.build(self, tab)

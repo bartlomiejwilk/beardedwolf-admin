@@ -49,4 +49,8 @@ def apply(root):
               foreground=[("readonly", c["fg"])])
     root.option_add("*TCombobox*Listbox.background", c["surface"])
     root.option_add("*TCombobox*Listbox.foreground", c["fg"])
+    for control in ("Text", "Listbox", "Canvas"):
+        root.option_add("*" + control + ".background", c["surface"])
+        root.option_add("*" + control + ".foreground", c["fg"])
+    root.option_add("*Text.insertBackground", c["fg"])
     root.configure(bg=c["bg"])

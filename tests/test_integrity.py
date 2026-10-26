@@ -33,6 +33,15 @@ class IntegrityTests(unittest.TestCase):
         row = site(host="SSH.Cluster126.Hosting.OVH.Net.")
         self.assertIsNone(bw_integrity.profile_endpoint_check(row, self.profiles))
 
+    def test_same_cluster_ovh_aliases(self):
+        profile = [dict(self.profiles[0], host="ssh01.cluster126.gra.hosting.ovh.net")]
+        self.assertIsNone(bw_integrity.profile_endpoint_check(site(), profile))
+
+    def test_unknown_hostname_equivalence_is_only_warning(self):
+        profile = [dict(self.profiles[0], host="ssh-alias.example.org")]
+        result = bw_integrity.profile_endpoint_check(site(), profile)
+        self.assertEqual(result[0], "UWAGA")
+
     def test_missing_profile_is_error(self):
         issues = bw_integrity.audit_inventory(
             [site(alias="unknown")], self.profiles)

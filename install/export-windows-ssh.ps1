@@ -79,7 +79,7 @@ foreach ($source in $sources) {
                 } else {
                     'winscp-type-' + [string]$session.GetValue('FSProtocol', 'unknown')
                 }
-                Add-Endpoint $source.name ([uri]::UnescapeDataString($sessionName)) ([string]$session.GetValue('HostName', '')) ([string]$session.GetValue('UserName', '')) $session.GetValue('PortNumber', 22) $protocol
+                Add-Endpoint $source.name ([uri]::UnescapeDataString($sessionName)) ([string]$session.GetValue('HostName', '')) ([string]$session.GetValue('UserName', '')) ($session.GetValue('PortNumber', 22)) $protocol
             } finally { $session.Close() }
         }
     } finally { $root.Close() }

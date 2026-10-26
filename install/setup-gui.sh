@@ -50,7 +50,10 @@ printf 'Interpreter GUI: %s - ' "$PYTHON"
 cache_dir="$HOME/.cache/beardedwolf-admin/pycache"
 mkdir -p "$cache_dir"
 PYTHONPYCACHEPREFIX="$cache_dir" "$PYTHON" -m py_compile \
-  "$repo/toolkit/bw" "$repo/toolkit/bw_gui.py" "$repo/toolkit/bw_servers.py"
+  "$repo/toolkit/bw" "$repo/toolkit/bw_gui.py" "$repo/toolkit/bw_servers.py" \
+  "$repo/toolkit/bw_fleet.py" "$repo/toolkit/bw_sync.py" "$repo/toolkit/bw_wp.py" \
+  "$repo/toolkit/bw_monitor.py" "$repo/toolkit/bw_discover.py" \
+  "$repo/toolkit/bw_filezilla.py"
 echo "Sprawdzono skladnie Python."
 
 app_dir="$HOME/.local/share/applications"

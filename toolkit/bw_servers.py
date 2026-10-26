@@ -15,6 +15,20 @@ DEFAULT_PROFILE_FILE = PROFILE_FILE
 SSH_DIR = Path.home() / ".ssh"
 SSH_CONFIG = SSH_DIR / "config"
 
+# Only this WSL instance; never stored in Syncthing or GitHub.
+PAUSE_NAME = "ssh-disabled.local"
+
+
+def ssh_paused():
+    return (CONFIG_DIR / PAUSE_NAME).is_file()
+
+
+def require_ssh_enabled():
+    if ssh_paused():
+        raise RuntimeError(
+            "SSH wstrzymane lokalnie. Przywroc profile dopiero po sprawdzeniu kluczy i autoryzacji."
+        )
+
 BEGIN = "# BEGIN BEARDEDWOLF SERVERS"
 END = "# END BEARDEDWOLF SERVERS"
 
@@ -59,7 +73,7 @@ def load_profiles():
     if shared is not None:
         # Recreate only the BeardedWolf-owned SSH configuration section on this
         # machine. The IdentityFile paths are machine-local; keys are never synced.
-        desired = make_ssh_config(profiles)
+        desired = make_ssh_config([] if ssh_paused() else profiles)
         current = SSH_CONFIG.read_text(encoding="utf-8") if SSH_CONFIG.exists() else ""
         if desired != current:
             if SSH_CONFIG.is_symlink():
@@ -133,7 +147,7 @@ def save_profiles(profiles):
         raise ValueError("Pliki konfiguracyjne są dowiązaniami symbolicznymi; wymagana ręczna kontrola.")
     if len({p["alias"].lower() for p in profiles}) != len(profiles):
         raise ValueError("Alias musi być unikatowy.")
-    config = make_ssh_config(profiles)
+    config = make_ssh_config([] if ssh_paused() else profiles)
     SSH_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
     SSH_DIR.chmod(0o700)
     CONFIG_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -213,6 +227,7 @@ def create_key(profile):
 
 
 def install_public_key(profile):
+    require_ssh_enabled()
     public_key = Path(str(key_for(profile)) + ".pub")
     if not public_key.is_file():
         raise ValueError("Najpierw wygeneruj klucz SSH do serwerów.")
@@ -222,12 +237,14 @@ def install_public_key(profile):
 
 
 def connect(profile):
+    require_ssh_enabled()
     if not key_for(profile).is_file():
         raise ValueError("Najpierw wygeneruj osobny klucz SSH do serwerów.")
     terminal(["ssh", profile["alias"]], title="SSH: " + profile["alias"], use_agent=True)
 
 
 def verify_connection(profile):
+    require_ssh_enabled()
     if not shutil.which("keychain"):
         raise RuntimeError("Brak pakietu keychain.")
     cmd = 'eval "$(keychain --eval --quiet --noask)" || exit 1; ' + shlex.join(

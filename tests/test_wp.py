@@ -24,6 +24,17 @@ class WordpressTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             bw_wp.environment(dict(SITE, type="sprawdzic"))
 
+    def test_wrong_cluster_rejected_before_wordpress_commands(self):
+        site = dict(SITE, hosting={
+            "provider": "OVHcloud", "access": "ssh",
+            "host": "ssh.cluster114.hosting.ovh.net"
+        })
+        profile = dict(PROFILE, host="ssh.cluster126.hosting.ovh.net")
+        with patch.object(bw_wp.bw_servers, "load_profiles",
+                          return_value=[profile]):
+            with self.assertRaises(ValueError):
+                bw_wp.environment(site)
+
     def test_ssh_command_is_noninteractive_and_escaped(self):
         with patch.object(bw_wp, "environment", return_value=(PROFILE, "/home/web/site")), \
              patch.object(bw_wp.subprocess, "run", return_value=SimpleNamespace(

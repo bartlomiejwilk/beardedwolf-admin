@@ -23,11 +23,32 @@ def ssh_paused():
     return (CONFIG_DIR / PAUSE_NAME).is_file()
 
 
-def require_ssh_enabled():
-    if ssh_paused():
+def locally_active_profiles(profiles):
+    """Local allowlist; shared Syncthing inventory stays unchanged."""
+    marker = CONFIG_DIR / PAUSE_NAME
+    if not marker.exists():
+        return profiles
+    if marker.is_symlink() or not marker.is_file():
+        raise RuntimeError("Nieprawidlowa blokada lokalnego SSH.")
+    data = json.loads(marker.read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or data.get("schema") != 1:
+        raise ValueError("Niepoprawny format lokalnej blokady SSH.")
+    aliases = data.get("enabled")
+    if not isinstance(aliases, list) or not all(isinstance(x, str) for x in aliases):
+        raise ValueError("Niepoprawna lokalna lista aktywnych profili.")
+    return [p for p in profiles if p["alias"] in aliases]
+
+
+def require_ssh_enabled(alias=None):
+    if not ssh_paused():
+        return
+    enabled = locally_active_profiles([{"alias": alias}]) if alias else []
+    if not enabled:
         raise RuntimeError(
-            "SSH wstrzymane lokalnie. Przywroc profile dopiero po sprawdzeniu kluczy i autoryzacji."
+            "Ten profil SSH nie zostal jeszcze wlaczony na tym Kali. "
+            "Zweryfikuj jego klucz i wybierz lokalna aktywacje profilu."
         )
+
 
 BEGIN = "# BEGIN BEARDEDWOLF SERVERS"
 END = "# END BEARDEDWOLF SERVERS"
@@ -73,7 +94,7 @@ def load_profiles():
     if shared is not None:
         # Recreate only the BeardedWolf-owned SSH configuration section on this
         # machine. The IdentityFile paths are machine-local; keys are never synced.
-        desired = make_ssh_config([] if ssh_paused() else profiles)
+        desired = make_ssh_config(locally_active_profiles(profiles))
         current = SSH_CONFIG.read_text(encoding="utf-8") if SSH_CONFIG.exists() else ""
         if desired != current:
             if SSH_CONFIG.is_symlink():
@@ -227,7 +248,7 @@ def create_key(profile):
 
 
 def install_public_key(profile):
-    require_ssh_enabled()
+    require_ssh_enabled(profile["alias"])
     public_key = Path(str(key_for(profile)) + ".pub")
     if not public_key.is_file():
         raise ValueError("Najpierw wygeneruj klucz SSH do serwerów.")
@@ -237,14 +258,14 @@ def install_public_key(profile):
 
 
 def connect(profile):
-    require_ssh_enabled()
+    require_ssh_enabled(profile["alias"])
     if not key_for(profile).is_file():
         raise ValueError("Najpierw wygeneruj osobny klucz SSH do serwerów.")
     terminal(["ssh", profile["alias"]], title="SSH: " + profile["alias"], use_agent=True)
 
 
 def verify_connection(profile):
-    require_ssh_enabled()
+    require_ssh_enabled(profile["alias"])
     if not shutil.which("keychain"):
         raise RuntimeError("Brak pakietu keychain.")
     cmd = 'eval "$(keychain --eval --quiet --noask)" || exit 1; ' + shlex.join(

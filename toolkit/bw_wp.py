@@ -20,13 +20,13 @@ WP_VERSION = re.compile(r"[0-9]+(?:\.[0-9]+){1,3}\Z")
 
 
 def environment(site):
-    bw_servers.require_ssh_enabled()
     if not site.get("authorized") or site.get("type") != "wordpress":
         raise ValueError("Serwis musi mieć zatwierdzony zakres i platformę WordPress")
     root = bw_fleet.validate_wp_root(site.get("wp_root"))
     alias = site.get("ssh_alias")
     if not root or not alias:
         raise ValueError("Przypisz serwisowi potwierdzony profil SSH i katalog WordPress")
+    bw_servers.require_ssh_enabled(alias)
     profiles = {p["alias"]: p for p in bw_servers.load_profiles()}
     if alias not in profiles:
         raise ValueError("Nie istnieje lokalny profil SSH: " + str(alias))

@@ -64,6 +64,8 @@ def build(app):
                command=lambda: assign(app)).pack(side="left", padx=(12, 0))
     ttk.Button(row, text="Test SSH bez aliasu",
                command=lambda: test_selected(app)).pack(side="left", padx=(8, 0))
+    ttk.Button(row, text="Otworz wybrane logowanie",
+               command=lambda: connect_selected(app)).pack(side="left", padx=(8, 0))
     app.mapping_hint = tk.StringVar(value="Najpierw wybierz domene i polaczenie.")
     ttk.Label(tab, textvariable=app.mapping_hint, wraplength=1100).pack(
         anchor="w", fill="x", pady=(4, 0)
@@ -242,3 +244,24 @@ def test_selected(app):
         except RuntimeError:
             pass
     threading.Thread(target=run, daemon=True).start()
+
+
+def connect_selected(app):
+    """Open original FileZilla saved credentials or Windows SSH directly."""
+    name = app.mapping_pick.get()
+    entry = getattr(app, "mapping_candidates", {}).get(name)
+    if entry is None:
+        return
+    if not messagebox.askyesno("Otworz polaczenie",
+                               "Uruchomic zapisane polaczenie %s?" % name,
+                               parent=app.root):
+        return
+    try:
+        if entry["kind"] == "filezilla":
+            bw_windows_saved.open_filezilla_site(entry["entry"])
+        else:
+            p = entry["profile"]
+            bw_ssh_direct.connect_interactive(p["host"], p["user"], p["port"])
+        app.mapping_hint.set("Uruchomiono: " + name)
+    except (OSError, RuntimeError, ValueError) as exc:
+        messagebox.showerror("Nie otwarto polaczenia", str(exc), parent=app.root)

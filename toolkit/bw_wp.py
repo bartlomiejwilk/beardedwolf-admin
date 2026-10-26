@@ -12,6 +12,7 @@ import subprocess
 
 import bw_fleet
 import bw_servers
+import bw_integrity
 
 MAX_OUTPUT = 100000
 PLUGIN_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,125}\Z")
@@ -28,6 +29,9 @@ def environment(site):
     profiles = {p["alias"]: p for p in bw_servers.load_profiles()}
     if alias not in profiles:
         raise ValueError("Nie istnieje lokalny profil SSH: " + str(alias))
+    mismatch = bw_integrity.profile_endpoint_check(site, list(profiles.values()))
+    if mismatch and mismatch[0] == "BŁĄD":
+        raise ValueError("Zatrzymano operację WP-CLI: " + mismatch[1])
     if not bw_servers.key_for(profiles[alias]).is_file():
         raise ValueError("Brak prywatnego klucza SSH dla wskazanego profilu")
     return profiles[alias], root

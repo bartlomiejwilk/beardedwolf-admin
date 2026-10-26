@@ -25,23 +25,10 @@ def test_direct(host, user, port, timeout=8):
         if not os.path.isfile(ssh):
             raise RuntimeError("Brak Windows ssh.exe. Sprawdz instalacje klienta SSH.")
 
-    # -F NUL on Windows uses the Windows null device as an empty config.
-    # Avoid assuming whether a Host alias config is present. Use an actual
-    # temporary EMPTY config outside default Windows ~/.ssh instead.
-    tmp = None
+    # OpenSSH '-F none' disables user and system config files: no Host aliases.
+    # Only default Windows keys and its ssh-agent will be tried.
     try:
-        import tempfile
-        from pathlib import Path
-        fd, local_config = tempfile.mkstemp(prefix="bw-direct-", suffix=".conf")
-        os.close(fd)
-        tmp = local_config
-        # Windows ssh.exe cannot read a Linux /tmp path. wslpath converts
-        # only when WSL interoperability is available.
-        win_config = subprocess.run(
-            ["wslpath", "-w", str(Path(tmp))],
-            text=True, capture_output=True, timeout=4, check=True
-        ).stdout.strip()
-        args = [ssh, "-F", win_config,
+        args = [ssh, "-F", "none",
                 "-o", "BatchMode=yes",
                 "-o", "NumberOfPasswordPrompts=0",
                 "-o", "PreferredAuthentications=publickey",
@@ -69,6 +56,3 @@ def test_direct(host, user, port, timeout=8):
         if "timed out" in msg or "connection timed out" in msg:
             return ("TIMEOUT", "Host lub port nie odpowiada w limicie.")
         return ("CHECK", "Brak potwierdzenia logowania; mozliwa ograniczona powloka lub inna metoda uwierzytelnienia (kod %s)." % result.returncode)
-    finally:
-        if tmp and os.path.isfile(tmp):
-            os.unlink(tmp)

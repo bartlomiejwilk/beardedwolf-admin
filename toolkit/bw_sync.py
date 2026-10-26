@@ -247,3 +247,50 @@ def status():
                            "Stan połączenia Syncthing z Lenovo nie jest weryfikowany."}
     except (OSError, ValueError, RuntimeError) as exc:
         return {"enabled": True, "ready": False, "message": str(exc)}
+
+
+def main():
+    """Enable sync safely even when the Win-KeX graphical desktop is unavailable."""
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="BeardedWolf: synchronizacja listy domen i metadanych SSH przez Syncthing"
+    )
+    parser.add_argument(
+        "action", choices=("status", "detect", "publish", "adopt"),
+        help="status: stan, detect: katalog Windows, publish: PC-Wilk, adopt: Lenovo"
+    )
+    parser.add_argument(
+        "--root", type=Path, help="Istniejący katalog Windows BeardedWolf/Sync"
+    )
+    parser.add_argument(
+        "--yes", action="store_true", help="Potwierdzam zmianę źródła danych"
+    )
+    args = parser.parse_args()
+    if args.action == "status":
+        print(status())
+        return
+    root = args.root or detect_windows_sync_root()
+    if args.action == "detect":
+        print(root)
+        return
+    if not args.yes:
+        print("Wymagane potwierdzenie: dodaj --yes po sprawdzeniu działania Syncthing.")
+        print("Katalog:", root)
+        return
+    if _config() is not None:
+        raise RuntimeError("Synchronizacja jest już skonfigurowana na tym komputerze.")
+    import bw_fleet
+    import bw_servers
+    # Initialize/migrate only local inventory, before enabling shared storage.
+    bw_fleet.inventory()
+    result = enable(root, args.action, bw_fleet.SITES_FILE, bw_servers.PROFILE_FILE)
+    # Generate only the local OpenSSH section; no private keys are copied.
+    bw_servers.load_profiles()
+    print("Metadane połączone: ", result["folder"])
+    print("Zachowane kopie lokalne: ", len(result["local_backups"]))
+    print("Syncthing musi osobno potwierdzić transfer między komputerami.")
+    print("Klucze prywatne SSH nie są synchronizowane.")
+
+
+if __name__ == "__main__":
+    main()

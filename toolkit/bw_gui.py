@@ -570,6 +570,110 @@ class AdminApp:
             error = (error + ". " if error else "") + "Nie zapisano dziennika aktualizacji."
         self.messages.put(("wp_update_done", domain, kind, results, error))
 
+    def build_integrity(self, tab):
+        """Read-only operator queue: explain data inconsistencies before SSH or WP."""
+        ttk.Label(tab, text="Spójność rejestru domen i profili SSH",
+                  font=("Sans", 14, "bold")).pack(anchor="w", pady=(0, 6))
+        ttk.Label(
+            tab, text="Ta lista nie skanuje sieci i nie zmienia konfiguracji. "
+            "Pokazuje sprzeczności w danych, brakujące parametry i wpisy, które "
+            "wymagają ręcznego potwierdzenia. BŁĄD oznacza niespójność; UWAGA "
+            "to element do sprawdzenia; INFORMACJA to brak danych.",
+            wraplength=1060, justify="left"
+        ).pack(anchor="w", fill="x", pady=(0, 9))
+        header = ttk.Frame(tab)
+        header.pack(fill="x", pady=(0, 8))
+        ttk.Label(header, textvariable=self.integrity_hint,
+                  font=("Sans", 11, "bold")).pack(side="left")
+        ttk.Button(header, text="Sprawdź ponownie",
+                   command=self.refresh_integrity).pack(side="right")
+        body = ttk.Frame(tab)
+        body.pack(fill="both", expand=True)
+        self.integrity_list = ttk.Treeview(
+            body, show="headings", selectmode="browse",
+            columns=("severity", "domain", "category", "message")
+        )
+        for col, label, width in (
+            ("severity", "Ważność", 105),
+            ("domain", "Domena", 220),
+            ("category", "Obszar", 140),
+            ("message", "Do sprawdzenia", 750)
+        ):
+            self.integrity_list.heading(col, text=label)
+            self.integrity_list.column(col, width=width, stretch=col == "message")
+        self.integrity_list.pack(side="left", fill="both", expand=True)
+        scroll = ttk.Scrollbar(body, orient="vertical",
+                               command=self.integrity_list.yview)
+        scroll.pack(side="right", fill="y")
+        self.integrity_list.configure(yscrollcommand=scroll.set)
+        self.integrity_list.bind("<<TreeviewSelect>>", self.on_integrity_select)
+        self.integrity_list.bind("<Double-1>",
+                                 lambda _evt: self.go_to_integrity_site())
+        ttk.Label(tab, textvariable=self.integrity_detail,
+                  wraplength=1060, justify="left").pack(
+            anchor="w", fill="x", pady=(11, 7)
+        )
+        ttk.Button(tab, text="Otwórz domenę w rejestrze",
+                   command=self.go_to_integrity_site).pack(anchor="w", pady=(0, 4))
+        self.refresh_integrity()
+
+    def refresh_integrity(self):
+        try:
+            issues = bw_integrity.audit_inventory(
+                bw_fleet.inventory()["sites"], bw_servers.load_profiles()
+            )
+            self.integrity_rows = issues
+            for iid in self.integrity_list.get_children():
+                self.integrity_list.delete(iid)
+            for index, item in enumerate(issues):
+                self.integrity_list.insert(
+                    "", "end", iid=str(index),
+                    values=(item["severity"], item["domain"],
+                            item["category"], item["message"])
+                )
+            summary = bw_integrity.audit_summary(issues)
+            self.integrity_hint.set(
+                f"Błędy: {summary['errors']}    "
+                f"Uwagi: {summary['warnings']}    "
+                f"Informacje: {summary['info']}"
+            )
+            self.integrity_detail.set(
+                "Wybierz pozycję, aby zobaczyć opis i przejść do domeny."
+                if issues else "Brak wykrytych niespójności w zapisanych danych."
+            )
+        except (OSError, ValueError, RuntimeError, KeyError) as exc:
+            self.integrity_hint.set("Nie można sprawdzić spójności rejestru.")
+            self.integrity_detail.set(str(exc))
+
+    def on_integrity_select(self, _evt=None):
+        selected = self.integrity_list.selection()
+        if not selected:
+            return
+        issue = self.integrity_rows[int(selected[0])]
+        self.integrity_detail.set(issue["severity"] + " | " +
+                                  issue["domain"] + " | " + issue["message"])
+
+    def go_to_integrity_site(self):
+        selection = self.integrity_list.selection()
+        if not selection:
+            messagebox.showinfo(
+                "Wybierz pozycję", "Zaznacz domenę wymagającą wyjaśnienia.",
+                parent=self.root
+            )
+            return
+        domain = self.integrity_rows[int(selection[0])]["domain"]
+        self.fleet_search.set("")
+        self.fleet_group.set("Wszystkie")
+        self.refresh_fleet()
+        for iid in self.site_list.get_children():
+            if self.site_list.set(iid, "domain") == domain:
+                self.site_list.selection_set(iid)
+                self.site_list.focus(iid)
+                self.site_list.see(iid)
+                self.tabs.select(self.fleet_tab)
+                self.status.set("Wybrano do weryfikacji: " + domain)
+                return
+
     def build_sync(self, tab):
         ttk.Label(tab, text="Syncthing: PC-Wilk ↔ Lenovo YOGA-WILK",
                   font=("Sans", 13, "bold")).pack(anchor="w", pady=(0, 10))
@@ -879,6 +983,8 @@ class AdminApp:
             sort = self.table_sort.get(str(self.site_list))
             if sort:
                 self.apply_table_sort(self.site_list, *sort)
+            if hasattr(self, "integrity_list"):
+                self.refresh_integrity()
         except Exception as exc:
             messagebox.showerror("Rejestr serwisów", str(exc), parent=self.root)
 

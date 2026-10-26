@@ -15,7 +15,7 @@ for executable in /usr/bin/python3.14 /usr/bin/python3.15 /usr/bin/python3 /usr/
   fi
 done
 [[ -n "$python" ]] || { echo "Brak interpretera Python z Tkinter." >&2; exit 1; }
-"$python" -m py_compile "$root/toolkit/bw_launcher.py" "$root/toolkit/bw_console.py" "$root/toolkit/bw_theme.py" "$root/toolkit/bw_overview.py" "$root/toolkit/bw_paths.py" "$root/toolkit/bw_access.py"
+"$python" -m py_compile "$root/toolkit/bw_launcher.py" "$root/toolkit/bw_console.py" "$root/toolkit/bw_theme.py" "$root/toolkit/bw_overview.py" "$root/toolkit/bw_paths.py" "$root/toolkit/bw_access.py" "$root/toolkit/bw_ops_access.py" "$root/toolkit/bw_ops_paths.py"
 folder="$HOME/.local/share/applications"
 mkdir -p "$folder"
 shortcut="$folder/beardedwolf-admin.desktop"

@@ -9,7 +9,11 @@ def build(app):
     ttk.Label(tab, text="Zapisane logowania Windows", font=("DejaVu Sans", 14, "bold")).pack(anchor="w")
     ttk.Label(tab, text="FileZilla korzysta z zapisanych hasel, OpenSSH z kluczy Windows. "
               "Nie kopiujemy haseł do panelu ani do synchronizacji.", wraplength=900).pack(anchor="w")
-    ttk.Button(tab, text="Wczytaj", command=lambda: refresh(app)).pack(anchor="w", pady=8)
+    controls = ttk.Frame(tab)
+    controls.pack(anchor="w", pady=8)
+    ttk.Button(controls, text="Wczytaj", command=lambda: refresh(app)).pack(side="left")
+    ttk.Button(controls, text="Przypisz dostep do domeny",
+               command=lambda: app.tabs.select(app.mapping_tab)).pack(side="left", padx=(9, 0))
     app.saved_status = tk.StringVar(value="Wybierz Wczytaj.")
     ttk.Label(tab, textvariable=app.saved_status).pack(anchor="w")
     tree = ttk.Treeview(tab, columns=("name", "protocol", "host", "user", "port"),

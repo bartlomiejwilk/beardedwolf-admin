@@ -21,6 +21,6 @@ jobs:
           python-version: "3.13"
       - name: Validate Python syntax
         run: |
-          python -m py_compile toolkit/bw toolkit/bw_gui.py toolkit/bw_servers.py toolkit/bw_fleet.py toolkit/bw_discover.py toolkit/bw_filezilla.py toolkit/bw_monitor.py toolkit/bw_wp.py toolkit/bw_sync.py toolkit/bw_integrity.py toolkit/bw_overview.py toolkit/bw_console.py toolkit/bw_theme.py toolkit/bw_launcher.py toolkit/bw_access.py toolkit/bw_paths.py
+          python -m py_compile toolkit/bw toolkit/bw_gui.py toolkit/bw_servers.py toolkit/bw_fleet.py toolkit/bw_discover.py toolkit/bw_filezilla.py toolkit/bw_monitor.py toolkit/bw_wp.py toolkit/bw_sync.py toolkit/bw_integrity.py toolkit/bw_overview.py toolkit/bw_console.py toolkit/bw_theme.py toolkit/bw_launcher.py toolkit/bw_access.py toolkit/bw_paths.py toolkit/bw_ops_access.py toolkit/bw_ops_paths.py
       - name: Run offline tests
         run: python -m unittest discover -s tests -v

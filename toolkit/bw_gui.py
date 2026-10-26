@@ -16,6 +16,7 @@ import bw_fleet
 import bw_filezilla
 import bw_monitor
 import bw_wp
+import bw_sync
 
 HERE = Path(__file__).resolve().parent
 CLI_FILE = HERE / "bw"
@@ -42,6 +43,9 @@ class AdminApp:
         self.wp_errors = {}
         self.wp_dialogs = {}
         self.wp_batch_running = False
+        self.sync_last_signature = None
+        self.sync_path = tk.StringVar(value="")
+        self.sync_state = tk.StringVar(value="Synchronizacja jeszcze nie skonfigurowana.")
         self.fleet_running = False
         self.last_fleet_report = None
         self.table_sort = {}
@@ -67,6 +71,7 @@ class AdminApp:
         self.root.after(120, self.pump)
         self.root.after(900, self.refresh_dashboard)
         self.root.after(15 * 60 * 1000, self.periodic_dashboard)
+        self.root.after(5000, self.poll_sync_changes)
 
     def on_app_close(self):
         if any(dialog.get("busy") for dialog in self.wp_dialogs.values()):
@@ -96,12 +101,14 @@ class AdminApp:
         fleet = ttk.Frame(tabs, padding=14)
         controls = ttk.Frame(tabs, padding=14)
         reports = ttk.Frame(tabs, padding=14)
+        sync_tab = ttk.Frame(tabs, padding=14)
         tabs.add(dashboard, text="  Pulpit  ")
         tabs.add(fleet, text="  Wszystkie serwisy  ")
         tabs.add(tests, text="  Testy domen  ")
         tabs.add(servers, text="  Serwery SSH  ")
         tabs.add(controls, text="  Kontrole T01–T40  ")
         tabs.add(reports, text="  Raporty i informacje  ")
+        tabs.add(sync_tab, text="  Synchronizacja  ")
         self.tabs = tabs
         self.fleet_tab = fleet
         self.build_dashboard(dashboard)
@@ -110,6 +117,7 @@ class AdminApp:
         self.build_tests(tests)
         self.build_servers(servers)
         self.build_reports(reports)
+        self.build_sync(sync_tab)
 
         ttk.Separator(frame).pack(fill="x", pady=(10, 8))
         ttk.Label(frame, textvariable=self.status, wraplength=820).pack(
@@ -124,8 +132,12 @@ class AdminApp:
                    command=self.refresh_dashboard).pack(side="right", padx=(7, 0))
         ttk.Button(header, text="Sprawdź aktualizacje WP",
                    command=self.refresh_wp_batch).pack(side="right", padx=(7, 0))
+        try:
+            startup_sites = bw_fleet.inventory()["sites"]
+        except (OSError, ValueError, RuntimeError):
+            startup_sites = []
         groups = ["Wszystkie"] + sorted({s.get("group", "inne")
-                                        for s in bw_fleet.inventory()["sites"]})
+                                        for s in startup_sites})
         combo = ttk.Combobox(header, textvariable=self.dashboard_filter,
                              values=groups, width=15, state="readonly")
         combo.pack(side="right")
@@ -168,7 +180,11 @@ class AdminApp:
         for widget in self.dashboard_inner.winfo_children():
             widget.destroy()
         self.dashboard_cards = {}
-        sites = bw_fleet.inventory()["sites"]
+        try:
+            sites = bw_fleet.inventory()["sites"]
+        except (OSError, ValueError, RuntimeError) as exc:
+            self.dashboard_hint.set("Błąd odczytu listy domen: " + str(exc))
+            return
         filter_name = self.dashboard_filter.get()
         if filter_name != "Wszystkie":
             sites = [s for s in sites if s.get("group") == filter_name]
@@ -259,8 +275,12 @@ class AdminApp:
     def refresh_dashboard(self):
         if self.dashboard_running:
             return
-        sites = [s for s in bw_fleet.inventory()["sites"] if s.get("authorized")
-                 and s.get("public_checks")]
+        try:
+            sites = [s for s in bw_fleet.inventory()["sites"] if s.get("authorized")
+                     and s.get("public_checks")]
+        except (OSError, ValueError, RuntimeError) as exc:
+            self.dashboard_hint.set("Nie można odczytać danych synchronizacji: " + str(exc))
+            return
         if not sites:
             self.dashboard_hint.set(
                 "Brak serwisów zatwierdzonych do testów publicznych. "
@@ -535,6 +555,140 @@ class AdminApp:
         except (OSError, ValueError):
             error = (error + ". " if error else "") + "Nie zapisano dziennika aktualizacji."
         self.messages.put(("wp_update_done", domain, kind, results, error))
+
+    def build_sync(self, tab):
+        ttk.Label(tab, text="Syncthing: PC-Wilk ↔ Lenovo YOGA-WILK",
+                  font=("Sans", 13, "bold")).pack(anchor="w", pady=(0, 10))
+        ttk.Label(
+            tab, text="Udostępniamy wyłącznie listę domen, hosting, profile serwerów "
+            "(alias/host/login/port) i przypisania SSH wraz ze ścieżkami WordPress. "
+            "Klucze SSH, hasła, tokeny, pliki ~/.ssh/config, dzienniki incydentów "
+            "i prywatne notatki pozostają lokalne.",
+            wraplength=870, justify="left"
+        ).pack(anchor="w", fill="x", pady=(0, 12))
+        path_frame = ttk.Frame(tab)
+        path_frame.pack(fill="x", pady=(0, 9))
+        ttk.Label(path_frame, text="Folder Syncthing:").pack(side="left")
+        ttk.Entry(path_frame, textvariable=self.sync_path).pack(
+            side="left", fill="x", expand=True, padx=(8, 6)
+        )
+        ttk.Button(path_frame, text="Wykryj Windows",
+                   command=self.detect_sync_path).pack(side="left", padx=(0, 6))
+        ttk.Button(path_frame, text="Wskaż…",
+                   command=self.pick_sync_path).pack(side="left")
+        actions = ttk.Frame(tab)
+        actions.pack(anchor="w", pady=(3, 10))
+        ttk.Button(
+            actions, text="PC-Wilk: opublikuj moje ustawienia",
+            command=lambda: self.activate_sync("publish")
+        ).pack(side="left", padx=(0, 8))
+        ttk.Button(
+            actions, text="Lenovo: przyjmij dane z Syncthing",
+            command=lambda: self.activate_sync("adopt")
+        ).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Sprawdź stan",
+                   command=self.refresh_sync_state).pack(side="left")
+        ttk.Label(tab, textvariable=self.sync_state, wraplength=870,
+                  justify="left").pack(anchor="w", fill="x", pady=(6, 10))
+        ttk.Label(
+            tab, text="Ważne: obie instalacje Windows muszą synchronizować ze sobą "
+            "TEN SAM folder BeardedWolf\\Sync w Syncthing. Aplikacja sama nie "
+            "paruje urządzeń i nie potwierdza, czy synchronizacja sieciowa dobiegła "
+            "końca. Zmiany w plikach wykrywa w ciągu kilku sekund od ich dostarczenia. "
+            "Edycja tego samego wpisu równocześnie może wywołać konflikt Syncthing, "
+            "który zostanie zablokowany zamiast nadpisany.",
+            wraplength=870, justify="left"
+        ).pack(anchor="w", fill="x")
+        self.refresh_sync_state()
+
+    def detect_sync_path(self):
+        try:
+            folder = bw_sync.detect_windows_sync_root()
+            self.sync_path.set(str(folder))
+            self.sync_state.set("Znaleziono: " + str(folder))
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
+            messagebox.showerror("Folder Syncthing", str(exc), parent=self.root)
+
+    def pick_sync_path(self):
+        folder = filedialog.askdirectory(parent=self.root,
+                                         title="Wybierz Windows/BeardedWolf/Sync")
+        if folder:
+            self.sync_path.set(folder)
+
+    def refresh_sync_state(self):
+        state = bw_sync.status()
+        self.sync_state.set(
+            ("AKTYWNA: " if state.get("ready") else
+             "PROBLEM: " if state.get("enabled") else
+             "NIEAKTYWNA: ") + state["message"] +
+            ("\nFolder: " + state.get("folder", "") if state.get("folder") else "")
+        )
+
+    def activate_sync(self, mode):
+        folder = self.sync_path.get().strip()
+        if not folder:
+            self.detect_sync_path()
+            folder = self.sync_path.get().strip()
+            if not folder:
+                return
+        if not messagebox.askyesno(
+            "Włączenie synchronizacji danych",
+            ("OPUBLIKUJ lokalną listę domen i profile SSH ze wskazanego PC "
+             "do wspólnego folderu Syncthing. Nie nadpiszemy istniejącej kopii. "
+             if mode == "publish" else
+             "PRZYJMIJ listę domen i profile SSH ze wspólnego folderu "
+             "Syncthing. Zachowamy kopię zapasową Twoich dotychczasowych "
+             "plików lokalnych. Nie kopiujemy kluczy SSH. ") +
+            "\n\nFolder: " + folder + "\n\nKontynuować?",
+            parent=self.root
+        ):
+            return
+        try:
+            result = bw_sync.enable(
+                folder, mode, bw_fleet.SITES_FILE, bw_servers.PROFILE_FILE
+            )
+            # Alias definitions become local OpenSSH config with separate local keys.
+            self.refresh_servers()
+            self.refresh_fleet()
+            self.dashboard_results.clear()
+            self.draw_dashboard()
+            self.refresh_sync_state()
+            self.sync_last_signature = None
+            messagebox.showinfo(
+                "Synchronizacja metadanych włączona",
+                "Katalog: " + result["folder"] +
+                "\nKopie lokalne: " + str(len(result["local_backups"])) +
+                "\n\nSyncthing musi być uruchomiony i sparowany na obu Windows. "
+                "To potwierdza jedynie lokalne udostępnienie plików, "
+                "a nie ich dostarczenie na drugi komputer.",
+                parent=self.root
+            )
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
+            messagebox.showerror("Synchronizacja", str(exc), parent=self.root)
+            self.refresh_sync_state()
+
+    def poll_sync_changes(self):
+        try:
+            state = bw_sync.status()
+            if state.get("ready"):
+                folder = Path(state["folder"])
+                signature = tuple(
+                    (name, (folder / name).stat().st_mtime_ns,
+                     (folder / name).stat().st_size)
+                    for name in bw_sync.FILES
+                )
+                if self.sync_last_signature != signature:
+                    self.sync_last_signature = signature
+                    self.refresh_servers()
+                    self.refresh_fleet()
+                    self.draw_dashboard()
+                    self.refresh_sync_state()
+            elif state.get("enabled"):
+                self.sync_state.set("PROBLEM SYNCHRONIZACJI: " + state["message"])
+        except (OSError, ValueError, RuntimeError) as exc:
+            self.sync_state.set("PROBLEM SYNCHRONIZACJI: " + str(exc))
+        finally:
+            self.root.after(5000, self.poll_sync_changes)
 
     def sort_table(self, tree, column):
         """Sortuj widok bez zmiany powiązań identyfikatorów i danych."""

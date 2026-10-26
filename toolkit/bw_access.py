@@ -27,6 +27,9 @@ def parse_ssh_config(path):
                 current = {"alias": aliases[0], "host": "",
                            "user": "", "port": 22, "protocol": "ssh"}
                 rows.append(current)
+        elif key == "match":
+            # Conditional Match directives do not belong to a global Host profile.
+            current = None
         elif current is not None and key in ("hostname", "user", "port"):
             if key == "hostname":
                 current["host"] = value
@@ -89,7 +92,7 @@ def main():
         args.path.chmod(0o600)
         print("Zapisano metadane połączeń, bez haseł i kluczy:", args.path)
     else:
-        data = json.loads(args.path.read_text(encoding="utf-8"))
+        data = json.loads(args.path.read_text(encoding="utf-8-sig"))
         if data.get("schema") != 1 or not isinstance(data.get("profiles"), list):
             raise ValueError("Nieobsługiwany format pliku.")
         for item in inspect(data["profiles"]):

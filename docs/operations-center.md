@@ -86,3 +86,39 @@ pozostawać zgodne z zasadami SZBI oraz zakresem uprawnień operatora.
 - **Katalogi WordPress**: operator wybiera domenę, potwierdza odczyt przez SSH lub FTPS, przegląda listę znalezionych katalogów i dopiero zatwierdza wybraną ścieżkę. Nie ma automatycznego zgadywania powiązań ani zapisu bez zgody.
 
 Na serwisach z uprawnieniami tylko do FTP bez TLS funkcja nie przesyła hasła przez sieć w sposób niezaszyfrowany. Dla zasobów służbowych obowiązują zasady uprawnień i ochrony informacji organizacji. Samo uruchomienie panelu nie wykonuje żadnego zdalnego odczytu plików.
+
+
+## Wstrzymanie niesprawnych profili SSH na jednym komputerze
+
+Nie usuwaj synchronizowanego pliku servers.json ani nie kasuj kluczy SSH.
+Panel rekonstruuje wlasna sekcje w ~/.ssh/config z Syncthing przy kazdym
+odczycie profili. Wstrzymanie musi byc obslugiwane przez kod aplikacji.
+
+Na konkretnym komputerze, w jego Kali (np. PC-Wilk):
+
+    cd ~/beardedwolf/repos/beardedwolf-admin
+    git pull --ff-only
+    python3 -m unittest discover -s tests -v
+    python3 toolkit/bw_local_ssh.py status
+    python3 toolkit/bw_local_ssh.py pause --yes
+    python3 toolkit/bw_local_ssh.py status
+
+Skrypt wykonuje kopie istniejacego ~/.ssh/config i metadanych serwerow
+w ~/.local/state/beardedwolf/ssh-backups/<czas>/, poza Syncthing.
+Wylacza lokalne aliasy generowane przez BeardedWolf, ale nie usuwa ich
+ze wspolnego rejestru ani przypisan domen. Nie modyfikuje prywatnych kluczy,
+authorized_keys i innych sekcji SSH uzytkownika.
+
+Po sprawdzeniu loginu, hosta i lokalnego klucza mozna wlaczyc JEDEN profil:
+
+    python3 toolkit/bw_local_ssh.py allow jaslo --yes
+    python3 toolkit/bw_local_ssh.py status
+
+Polecenie allow przywraca jedynie wskazany alias na tym komputerze;
+nie uruchamia polaczenia ani zmian na serwerze. Przywrocenie wszystkich
+dawnych aliasow, wyłącznie na danym komputerze (OSTROZNIE):
+
+    python3 toolkit/bw_local_ssh.py resume --yes
+
+Uzycie przyciskow SSH i operacji WP-CLI dla wstrzymanych profili jest
+zablokowane. Komputer Lenovo zachowuje swoj odrebny stan lokalny.

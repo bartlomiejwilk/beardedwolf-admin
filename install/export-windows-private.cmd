@@ -11,7 +11,7 @@ if errorlevel 1 (echo Could not protect the export directory ACL. Stopping.& exi
 if exist "%APPDATA%\FileZilla\sitemanager.xml" copy /y "%APPDATA%\FileZilla\sitemanager.xml" "%OUT%\FileZilla\" >nul
 if exist "%APPDATA%\FileZilla\recentservers.xml" copy /y "%APPDATA%\FileZilla\recentservers.xml" "%OUT%\FileZilla\" >nul
 if exist "%APPDATA%\FileZilla\filezilla.xml" copy /y "%APPDATA%\FileZilla\filezilla.xml" "%OUT%\FileZilla\" >nul
-if exist "%USERPROFILE%\.ssh\" xcopy "%USERPROFILE%\.ssh" "%OUT%\Windows-OpenSSH\" /E /H /K /I /Y >nul
+if exist "%USERPROFILE%\.ssh\" robocopy "%USERPROFILE%\.ssh" "%OUT%\Windows-OpenSSH" /E /XJ /SL /SJ /R:0 /W:0 /COPY:DAT >nul
 if exist "%APPDATA%\WinSCP.ini" copy /y "%APPDATA%\WinSCP.ini" "%OUT%\" >nul
 reg query "HKCU\Software\SimonTatham\PuTTY" >nul 2>&1
 if not errorlevel 1 reg export "HKCU\Software\SimonTatham\PuTTY" "%OUT%\PuTTY.reg" /y >nul

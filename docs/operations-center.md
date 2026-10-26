@@ -77,3 +77,12 @@ Bitwarden pozostaje magazynem poświadczeń. Nie przesyłaj haseł i kluczy
 prywatnych do GitHuba, Syncthing ani przez czat. W środowisku urzędowym
 eksport, instalacja narzędzi i przenoszenie informacji technicznych muszą
 pozostawać zgodne z zasadami SZBI oraz zakresem uprawnień operatora.
+
+
+## Zakładki w nowym interfejsie
+
+- **Pulpit**: domeny i dostępność w pierwszych kolumnach, problemy u góry, przekierowania na końcu.
+- **Dostępy / import**: eksport z Kali, porównanie lokalnych plików JSON lub XML FileZilli (bez przenoszenia haseł); nowy profil SSH dodaje się indywidualnie po potwierdzeniu.
+- **Katalogi WordPress**: operator wybiera domenę, potwierdza odczyt przez SSH lub FTPS, przegląda listę znalezionych katalogów i dopiero zatwierdza wybraną ścieżkę. Nie ma automatycznego zgadywania powiązań ani zapisu bez zgody.
+
+Na serwisach z uprawnieniami tylko do FTP bez TLS funkcja nie przesyła hasła przez sieć w sposób niezaszyfrowany. Dla zasobów służbowych obowiązują zasady uprawnień i ochrony informacji organizacji. Samo uruchomienie panelu nie wykonuje żadnego zdalnego odczytu plików.

@@ -11,6 +11,7 @@ import bw_sync
 
 CONFIG_DIR = Path.home() / ".config" / "beardedwolf"
 PROFILE_FILE = CONFIG_DIR / "servers.json"
+DEFAULT_PROFILE_FILE = PROFILE_FILE
 SSH_DIR = Path.home() / ".ssh"
 SSH_CONFIG = SSH_DIR / "config"
 
@@ -39,8 +40,15 @@ def validate(alias, host, user, port):
     return dict(alias=alias, host=host, user=user, port=num)
 
 
+def shared_profile_file():
+    # Tests and explicit isolated configurations must never access a live share.
+    if PROFILE_FILE != DEFAULT_PROFILE_FILE:
+        return None
+    return bw_sync.active_file("servers.json")
+
+
 def load_profiles():
-    shared = bw_sync.active_file("servers.json")
+    shared = shared_profile_file()
     source = shared or PROFILE_FILE
     if not source.exists():
         return []
@@ -143,7 +151,7 @@ def save_profiles(profiles):
         shutil.copy2(PROFILE_FILE, backup)
         backup.chmod(0o600)
     atomic_save(SSH_CONFIG, config)
-    destination = bw_sync.active_file("servers.json") or PROFILE_FILE
+    destination = shared_profile_file() or PROFILE_FILE
     atomic_save(destination, json.dumps(profiles, ensure_ascii=False, indent=2) + "\n")
 
 

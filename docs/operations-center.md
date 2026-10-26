@@ -37,9 +37,9 @@ prywatnych kluczy, ścieżek do nich ani znanych kluczy hostów.
 
 Na komputerze Windows bez WSL można uruchomić w PowerShell:
 
-    powershell -NoProfile -ExecutionPolicy Bypass -File .\install\export-windows-ssh.ps1
+    .\install\export-windows-ssh.ps1
 
-Skrypt dotyczy konfiguracji Windows OpenSSH w katalogu użytkownika, bez
+Jeżeli polityka wykonywania skryptów w urzędzie blokuje uruchomienie, uzgodnij to z administratorem IT. Nie obchodź polityki zabezpieczeń.\nSkrypt dotyczy konfiguracji Windows OpenSSH w katalogu użytkownika, bez
 uprawnień administratora. Inne źródła, np. FileZilla, należy eksportować
 w aplikacji i bezpiecznie wczytać przez zakładkę Dostępy / import.
 Przed udostępnieniem wyeksportowanych plików upewnij się, że nie zawierają

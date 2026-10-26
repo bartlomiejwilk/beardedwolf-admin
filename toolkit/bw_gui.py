@@ -17,6 +17,7 @@ import bw_filezilla
 import bw_monitor
 import bw_wp
 import bw_sync
+import bw_integrity
 
 HERE = Path(__file__).resolve().parent
 CLI_FILE = HERE / "bw"
@@ -30,8 +31,8 @@ class AdminApp:
     def __init__(self, root):
         self.root = root
         self.root.title("BeardedWolf Admin | Centrum diagnostyki")
-        self.root.geometry("1100x770")
-        self.root.minsize(880, 630)
+        self.root.geometry("1370x850")
+        self.root.minsize(980, 660)
         self.messages = queue.Queue()
         self.last_report = None
         self.profiles = []
@@ -46,6 +47,11 @@ class AdminApp:
         self.sync_last_signature = None
         self.sync_path = tk.StringVar(value="")
         self.sync_state = tk.StringVar(value="Synchronizacja jeszcze nie skonfigurowana.")
+        self.fleet_search = tk.StringVar(value="")
+        self.fleet_group = tk.StringVar(value="Wszystkie")
+        self.integrity_rows = []
+        self.integrity_hint = tk.StringVar(value="Kontrola spójności jeszcze nie wykonana.")
+        self.integrity_detail = tk.StringVar(value="Zaznacz pozycję, aby zobaczyć szczegóły.")
         self.fleet_running = False
         self.last_fleet_report = None
         self.table_sort = {}
@@ -97,6 +103,7 @@ class AdminApp:
         tabs.pack(fill="both", expand=True)
         dashboard = ttk.Frame(tabs, padding=14)
         tests = ttk.Frame(tabs, padding=14)
+        integrity_tab = ttk.Frame(tabs, padding=14)
         servers = ttk.Frame(tabs, padding=14)
         fleet = ttk.Frame(tabs, padding=14)
         controls = ttk.Frame(tabs, padding=14)
@@ -104,6 +111,7 @@ class AdminApp:
         sync_tab = ttk.Frame(tabs, padding=14)
         tabs.add(dashboard, text="  Pulpit  ")
         tabs.add(fleet, text="  Wszystkie serwisy  ")
+        tabs.add(integrity_tab, text="  Do wyjaśnienia  ")
         tabs.add(tests, text="  Testy domen  ")
         tabs.add(servers, text="  Serwery SSH  ")
         tabs.add(controls, text="  Kontrole T01–T40  ")
@@ -116,6 +124,7 @@ class AdminApp:
         self.build_controls(controls)
         self.build_tests(tests)
         self.build_servers(servers)
+        self.build_integrity(integrity_tab)
         self.build_reports(reports)
         self.build_sync(sync_tab)
 
@@ -744,6 +753,21 @@ class AdminApp:
             "Nie uruchamiamy SSH ani testów plików bez osobnej konfiguracji.",
             wraplength=800, justify="left"
         ).pack(anchor="w", fill="x", pady=(0, 9))
+        filters = ttk.Frame(tab)
+        filters.pack(fill="x", pady=(0, 9))
+        ttk.Label(filters, text="Szukaj:").pack(side="left", padx=(0, 5))
+        self.fleet_search_entry = ttk.Entry(filters, textvariable=self.fleet_search, width=36)
+        self.fleet_search_entry.pack(side="left", padx=(0, 14))
+        self.fleet_search_entry.bind("<KeyRelease>", lambda _evt: self.refresh_fleet())
+        ttk.Label(filters, text="Grupa:").pack(side="left", padx=(0, 5))
+        self.fleet_group_combo = ttk.Combobox(
+            filters, textvariable=self.fleet_group, width=21, state="readonly"
+        )
+        self.fleet_group_combo.pack(side="left", padx=(0, 8))
+        self.fleet_group_combo.bind("<<ComboboxSelected>>",
+                                    lambda _evt: self.refresh_fleet())
+        self.fleet_count = tk.StringVar(value="")
+        ttk.Label(filters, textvariable=self.fleet_count).pack(side="left", padx=(12, 0))
         holder = ttk.Frame(tab)
         holder.pack(fill="both", expand=True)
         self.site_list = ttk.Treeview(holder, show="headings", selectmode="browse",
@@ -758,11 +782,14 @@ class AdminApp:
             self.site_list.heading(col, text=label)
             self.site_list.column(col, width=width, stretch=col == "domain")
         scrollbar = ttk.Scrollbar(holder, orient="vertical", command=self.site_list.yview)
-        self.site_list.configure(yscrollcommand=scrollbar.set)
+        horizontal = ttk.Scrollbar(holder, orient="horizontal", command=self.site_list.xview)
+        self.site_list.configure(yscrollcommand=scrollbar.set,
+                                 xscrollcommand=horizontal.set)
         self.site_list.pack(side="left", fill="both", expand=True)
         self.enable_table_sort(self.site_list)
         self.site_list.bind("<Double-1>", lambda _evt: self.edit_site())
         scrollbar.pack(side="right", fill="y")
+        horizontal.pack(side="bottom", fill="x")
         manage = ttk.Frame(tab)
         manage.pack(anchor="w", fill="x", pady=(8, 0))
         ttk.Button(manage, text="Dodaj serwis", command=self.add_site).pack(side="left", padx=(0, 6))
@@ -799,20 +826,39 @@ class AdminApp:
     def refresh_fleet(self):
         try:
             self.managed_sites = bw_fleet.inventory()["sites"]
-            selected_domain = None
-            selected = self.site_list.selection()
-            if selected:
-                index = int(selected[0])
-                if index < len(self.site_list.get_children()):
-                    selected_domain = self.site_list.item(selected[0], "values")[0]
+            groups = ["Wszystkie"] + sorted({
+                s.get("group", "inne") for s in self.managed_sites
+            })
+            self.fleet_group_combo.configure(values=groups)
+            if self.fleet_group.get() not in groups:
+                self.fleet_group.set("Wszystkie")
+            chosen = self.site_list.selection()
+            selected_domain = (
+                self.site_list.set(chosen[0], "domain") if chosen else None
+            )
             for item in self.site_list.get_children():
                 self.site_list.delete(item)
+            query = self.fleet_search.get().strip().casefold()
+            selected_group = self.fleet_group.get()
+            visible = 0
+            confirmed = 0
             for index, site in enumerate(self.managed_sites):
+                if selected_group != "Wszystkie" and site.get("group") != selected_group:
+                    continue
+                hosting = bw_fleet.hosting_info(site)
+                haystack = " ".join(str(x or "") for x in (
+                    site.get("domain"), site.get("group"), site.get("type"),
+                    hosting["provider"], hosting["host"], site.get("ssh_alias")
+                )).casefold()
+                if query and query not in haystack:
+                    continue
+                visible += 1
+                if site.get("authorized"):
+                    confirmed += 1
                 try:
                     last = bw_fleet.latest_report(site["domain"])["state"]
                 except (OSError, ValueError, KeyError, TypeError):
                     last = "NIEBADANY"
-                hosting = bw_fleet.hosting_info(site)
                 access = {"unknown": "nieustalony", "ftp": "FTP (TLS?)",
                           "ssh": "SSH", "ftps": "FTPS", "sftp": "SFTP"}.get(
                               hosting["access"], "nieustalony")
@@ -821,11 +867,15 @@ class AdminApp:
                     "nieustalona" if site["type"] == "sprawdzic" else site["type"],
                     hosting["provider"], access, hosting["host"] or "brak",
                     site.get("ssh_alias") or "BRAK",
-                    "POTWIERDZONY" if site.get("authorized") else "DO POTWIERDZENIA",
-                    last
+                    "TESTY DOZWOLONE" if site.get("authorized")
+                    else "TESTY WSTRZYMANE", last
                 ))
                 if site["domain"] == selected_domain:
                     self.site_list.selection_set(str(index))
+            self.fleet_count.set(
+                f"Wyświetlono {visible}/{len(self.managed_sites)} serwisów; "
+                f"testy dozwolone: {confirmed}/{visible}"
+            )
             sort = self.table_sort.get(str(self.site_list))
             if sort:
                 self.apply_table_sort(self.site_list, *sort)
@@ -838,7 +888,8 @@ class AdminApp:
             messagebox.showwarning("Wybierz domenę", "Najpierw zaznacz serwis w tabeli.",
                                    parent=self.root)
             return None
-        return self.managed_sites[int(selected[0])]
+        index = int(selected[0])
+        return self.managed_sites[index]
 
     def add_site(self):
         domain = simpledialog.askstring("Nowy serwis", "Domena (bez https://):",
@@ -1182,9 +1233,20 @@ class AdminApp:
         def save():
             chosen = selected.get()
             try:
+                alias = None if chosen == "(brak)" else chosen
+                proposed = dict(site, ssh_alias=alias)
+                finding = bw_integrity.profile_endpoint_check(proposed, available)
+                if finding and finding[0] == "BŁĄD":
+                    raise ValueError("Nie zapisano niezgodnego profilu: " + finding[1])
+                if finding and finding[0] == "UWAGA":
+                    if not messagebox.askyesno(
+                        "Sprawdź serwer przed zapisaniem",
+                        finding[1] + "\n\nPrzypisanie wymaga weryfikacji. Zapisać?",
+                        parent=dialog
+                    ):
+                        return
                 bw_fleet.assign_ssh(
-                    site["domain"], None if chosen == "(brak)" else chosen,
-                    root_var.get()
+                    site["domain"], alias, root_var.get()
                 )
                 dialog.destroy()
                 self.refresh_fleet()
@@ -1244,10 +1306,18 @@ class AdminApp:
                                  f"Nie znaleziono profilu {alias}. Popraw powiązanie.",
                                  parent=self.root)
             return
+        finding = bw_integrity.profile_endpoint_check(site, list(profiles.values()))
+        if finding and finding[0] == "BŁĄD":
+            messagebox.showerror("Zatrzymano połączenie z niewłaściwym serwerem",
+                                 finding[1], parent=self.root)
+            return
+        notice = "\n\n" + finding[1] if finding else ""
         if not messagebox.askyesno(
             "Połączenie SSH",
-            f"Otworzyć sesję do profilu {alias} ({profile['user']}@{profile['host']})? "
-            "Samo połączenie nie uruchamia testów hostowych.",
+            f"Domena: {site['domain']}\n"
+            f"Profil: {alias}\n"
+            f"Serwer: {profile['user']}@{profile['host']}:{profile['port']}"
+            f"{notice}\n\nOtworzyć sesję SSH? Nie uruchomi to testów hostowych.",
             parent=self.root
         ):
             return

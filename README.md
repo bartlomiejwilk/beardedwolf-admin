@@ -101,3 +101,12 @@ Pierwszy ekran BeardedWolf Admin pokazuje kafelki wszystkich zinwentaryzowanych 
 Dla serwisów WordPress przycisk **Aktualizacje WP** pozwala sprawdzić przez SSH zdalnym WP-CLI dostępną wersję Core i liczbę aktualizacji wtyczek, a następnie **ręcznie zaktualizować zaznaczone wtyczki lub Core**. Nie ma automatycznego instalowania aktualizacji na otwarciu programu. Zapisy na serwerze wymagają autoryzacji, prawidłowej ścieżki WordPress, działającego profilu SSH, aktualnej kopii plików i bazy oraz podwójnego potwierdzenia. Aktualizacja Core obejmuje także `wp core update-db`. Każda operacja jest odnotowywana lokalnie bez poświadczeń. Instrukcja i ograniczenia: [docs/flota-serwisow.md](docs/flota-serwisow.md).
 
 Repozytorium zawiera odtwarzalne testy offline i zadanie GitHub Actions: `python3 -m unittest discover -s tests -v`.
+
+
+## Wspólna inwentaryzacja PC-Wilk ↔ Lenovo YOGA-WILK
+
+BeardedWolf Admin potrafi korzystać z jednego rejestru domen i metadanych SSH w folderze Syncthing Windows. Po aktywowaniu na obu urządzeniach zmiany listy domen, dostawców hostingu, przypisań SSH, katalogów WordPress oraz profili SSH (alias/host/użytkownik/port) zapisują się do Syncthing i trafiają na drugi komputer. GUI sprawdza nowe wersje co 5 sekund. Prywatne klucze, hasła, pełny ~/.ssh i notatki tekstowe **nie** są synchronizowane.
+
+Pierwsze włączenie wymaga działania i sparowania Syncthing na obu Windows. W zakładce **Synchronizacja** na PC-Wilk użyj **Wykryj Windows**, a następnie **PC-Wilk: opublikuj moje ustawienia**. Na Lenovo, po faktycznym dostarczeniu obu plików przez Syncthing, użyj **Lenovo: przyjmij dane z Syncthing**. Dotychczasowe lokalne rejestry zostają jako kopie zapasowe. Aplikacja nie nadpisuje istniejącego folderu ze stanem, zgłasza konflikty Syncthing i nie obiecuje połączenia SSH, gdy na drugim komputerze brakuje osobnego klucza.
+
+Szczegółowa instrukcja: [docs/synchronizacja.md](docs/synchronizacja.md).

@@ -35,8 +35,9 @@ def test_direct(host, user, port, timeout=8):
             "-o", "ConnectTimeout=" + str(max(3, min(12, timeout))),
             "-p", str(port), "-l", user, host, "exit"]
     try:
-        result = subprocess.run(args, text=True, capture_output=True,
-                                timeout=max(16, timeout+6), check=False)
+        result = subprocess.run(args, text=True, encoding="utf-8", errors="replace",
+                                capture_output=True, timeout=max(16, timeout+6),
+                                check=False)
     except subprocess.TimeoutExpired:
         return ("TIMEOUT", "Przekroczono limit czasu polaczenia.")
     error = (result.stderr or result.stdout or "").strip()

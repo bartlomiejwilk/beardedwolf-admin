@@ -199,6 +199,8 @@ def enable(root, mode, local_sites, local_servers):
         raw_profiles = (json.loads(Path(local_servers).read_text(encoding="utf-8"))
                         if Path(local_servers).exists() else [])
         profiles = safe_profiles(raw_profiles)
+        import bw_servers
+        bw_servers.make_ssh_config(profiles)  # Preflight: do not publish broken aliases.
         backups.extend(filter(None, (
             _backup_local(Path(local_sites), "publish"),
             _backup_local(Path(local_servers), "publish")
@@ -213,7 +215,9 @@ def enable(root, mode, local_sites, local_servers):
                 "Admin/servers.json z PC-Wilk. Nie nadpisuję lokalnej konfiguracji."
             )
         safe_sites(json.loads(sites_path.read_text(encoding="utf-8")))
-        safe_profiles(json.loads(servers_path.read_text(encoding="utf-8")))
+        profiles = safe_profiles(json.loads(servers_path.read_text(encoding="utf-8")))
+        import bw_servers
+        bw_servers.make_ssh_config(profiles)  # Detect duplicate aliases before enabling.
         backups.extend(filter(None, (
             _backup_local(Path(local_sites), "adopt"),
             _backup_local(Path(local_servers), "adopt")
@@ -226,7 +230,11 @@ def enable(root, mode, local_sites, local_servers):
 
 
 def status():
-    settings = _config()
+    try:
+        settings = _config()
+    except (OSError, ValueError, RuntimeError) as exc:
+        return {"enabled": True, "ready": False,
+                "message": "Błąd konfiguracji synchronizacji: " + str(exc)}
     if not settings:
         return {"enabled": False, "message": "Nie skonfigurowano."}
     try:

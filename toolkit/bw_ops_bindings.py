@@ -163,43 +163,47 @@ def assign(app):
         )
         return
     info = app.mapping_candidates[chosen]
-    if info["kind"] == "ssh":
-        profile = info["profile"]
-        new_alias = info["alias"]
-        candidate = dict(site, ssh_alias=new_alias)
-        warning = bw_integrity.profile_endpoint_check(
-            candidate, bw_servers.load_profiles())
-        if warning and warning[0] == "BŁĄD":
-            messagebox.showerror("Nieprawidlowy serwer", warning[1],
-                                 parent=app.root)
-            return
-        previous_path = site.get("wp_root")
-        path = previous_path if site.get("ssh_alias") == new_alias else None
-        note = ("\nUWAGA: poprzedni katalog WordPress zostanie wyczyszczony."
-                if previous_path and not path else "")
-        message = ("Domena: %s\nProfil SSH: %s\nHost: %s\nLogin: %s\nPort: %s%s"
-                   % (domain, new_alias, profile["host"], profile["user"],
-                      profile["port"], note))
-        if warning:
-            message += "\n\n" + warning[1]
-        if not messagebox.askyesno("Potwierdz SSH", message, parent=app.root):
-            return
-        bw_fleet.assign_ssh(domain, new_alias, path)
-    else:
-        p = info["entry"]
-        protocol = p["protocol"].lower()
-        old = bw_fleet.hosting_info(site)
-        message = ("Domena: %s\n\nSTARE: %s | %s | %s\nNOWE: %s | %s:%s | %s\n\n"
-                   "Zastapic TYLKO dane FTP/SFTP hostingu? Profil SSH pozostanie."
-                   % (domain, old["access"], old["host"], old["user"],
-                      protocol.upper(), p["host"], p["port"], p["user"]))
-        if protocol == "ftp":
-            message += "\nSzyfrowanie FTP nalezy zweryfikowac oddzielnie."
-        if not messagebox.askyesno("Potwierdz polaczenie", message,
-                                   parent=app.root):
-            return
-        bw_fleet.update_hosting(domain, _provider(p["host"]), protocol,
-                                p["host"], int(p["port"]), p["user"])
+    try:
+        if info["kind"] == "ssh":
+            profile = info["profile"]
+            new_alias = info["alias"]
+            candidate = dict(site, ssh_alias=new_alias)
+            warning = bw_integrity.profile_endpoint_check(
+                candidate, bw_servers.load_profiles())
+            if warning and warning[0] == "BŁĄD":
+                messagebox.showerror("Nieprawidlowy serwer", warning[1],
+                                     parent=app.root)
+                return
+            previous_path = site.get("wp_root")
+            path = previous_path if site.get("ssh_alias") == new_alias else None
+            note = ("\nUWAGA: poprzedni katalog WordPress zostanie wyczyszczony."
+                    if previous_path and not path else "")
+            message = ("Domena: %s\nProfil SSH: %s\nHost: %s\nLogin: %s\nPort: %s%s"
+                       % (domain, new_alias, profile["host"], profile["user"],
+                          profile["port"], note))
+            if warning:
+                message += "\n\n" + warning[1]
+            if not messagebox.askyesno("Potwierdz SSH", message, parent=app.root):
+                return
+            bw_fleet.assign_ssh(domain, new_alias, path)
+        else:
+            p = info["entry"]
+            protocol = p["protocol"].lower()
+            old = bw_fleet.hosting_info(site)
+            message = ("Domena: %s\n\nSTARE: %s | %s | %s\nNOWE: %s | %s:%s | %s\n\n"
+                       "Zastapic TYLKO dane FTP/SFTP hostingu? Profil SSH pozostanie."
+                       % (domain, old["access"], old["host"], old["user"],
+                          protocol.upper(), p["host"], p["port"], p["user"]))
+            if protocol == "ftp":
+                message += "\nSzyfrowanie FTP nalezy zweryfikowac oddzielnie."
+            if not messagebox.askyesno("Potwierdz polaczenie", message,
+                                       parent=app.root):
+                return
+            bw_fleet.update_hosting(domain, _provider(p["host"]), protocol,
+                                    p["host"], int(p["port"]), p["user"])
+    except (OSError, ValueError, RuntimeError) as exc:
+        messagebox.showerror("Nie zapisano powiazania", str(exc), parent=app.root)
+        return
     refresh(app)
     app.refresh_fleet()
     app.mapping_hint.set("Zapisano powiazanie dla: " + domain)

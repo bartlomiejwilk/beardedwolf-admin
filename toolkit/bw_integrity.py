@@ -4,6 +4,7 @@ No network calls, no SSH, no filesystem edits. Results are advisory; only a
 verified SSH destination mismatch blocks connection in the GUI.
 """
 from collections import Counter
+import re
 
 
 SEVERITY = ("BŁĄD", "UWAGA", "INFORMACJA")
@@ -15,28 +16,38 @@ def host_key(value):
 
 
 def profile_endpoint_check(site, profiles):
-    """Return a high-confidence mismatch message or None.
+    """Return (level, message) or None; compare known OVH cluster identities.
 
-    The hosting host is compared ONLY if the record explicitly declares SSH
-    access. FTP/SFTP details are not treated as SSH and unknown hosts are not
-    guessed.
+    Different DNS names do not necessarily mean different servers. Block only
+    explicitly different OVH cluster numbers or missing SSH profile; other
+    different hostnames require human verification, not an automatic verdict.
     """
     alias = site.get("ssh_alias")
     if not alias:
         return None
     profile = next((p for p in profiles if p.get("alias") == alias), None)
     if profile is None:
-        return "Profil SSH '%s' nie istnieje na liście połączeń." % alias
+        return "BŁĄD", "Profil SSH '%s' nie istnieje na liście połączeń." % alias
     hosting = site.get("hosting") or {}
     if hosting.get("access") != "ssh" or not hosting.get("host"):
         return None
     expected = host_key(hosting.get("host"))
     actual = host_key(profile.get("host"))
-    if expected != actual:
-        return ("Profil SSH '%s' prowadzi do %s, ale w danych hostingu "
-                "wskazano %s. Sprawdź przypisanie przed połączeniem." %
-                (alias, actual, expected))
-    return None
+    if expected == actual:
+        return None
+    expected_cluster = re.search(r"(?:^|\.)ssh(?:\d*)?\.cluster(\d+)\.", expected)
+    actual_cluster = re.search(r"(?:^|\.)ssh(?:\d*)?\.cluster(\d+)\.", actual)
+    if expected_cluster and actual_cluster:
+        if expected_cluster.group(1) == actual_cluster.group(1):
+            return None
+        return ("BŁĄD", "Profil SSH '%s' prowadzi na OVH cluster%s (%s), "
+                "a hosting domeny wskazuje cluster%s (%s). "
+                "Popraw powiązanie przed połączeniem." %
+                (alias, actual_cluster.group(1), actual,
+                 expected_cluster.group(1), expected))
+    return ("UWAGA", "Profil SSH '%s' prowadzi do %s, a hosting wskazuje %s. "
+            "Nazwy mogą być aliasami DNS; zweryfikuj faktyczny serwer." %
+            (alias, actual, expected))
 
 
 def audit_inventory(sites, profiles):
@@ -66,7 +77,8 @@ def audit_inventory(sites, profiles):
             else:
                 mismatch = profile_endpoint_check(site, profiles)
                 if mismatch:
-                    report(domain, "BŁĄD", "SSH", mismatch)
+                    severity, message = mismatch
+                    report(domain, severity, "SSH", message)
                 elif info.get("access") in ("ftp", "ftps", "sftp"):
                     report(domain, "UWAGA", "Protokół",
                            "Hosting wskazuje %s, a serwis ma profil SSH '%s'. "

@@ -18,6 +18,7 @@ LIMIT = 40
 
 
 def ssh_roots(alias, depth=5):
+    bw_servers.require_ssh_enabled(alias)
     profiles = {p["alias"]: p for p in bw_servers.load_profiles()}
     if alias not in profiles:
         raise ValueError("Nie ma tego profilu SSH w panelu.")

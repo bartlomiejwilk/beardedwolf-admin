@@ -55,3 +55,19 @@ def test_direct(host, user, port, timeout=8):
     if "timed out" in msg or "connection timed out" in msg:
         return ("TIMEOUT", "Host lub port nie odpowiada w limicie.")
     return ("CHECK", "Brak potwierdzenia logowania; mozliwa ograniczona powloka lub inna metoda uwierzytelnienia (kod %s)." % result.returncode)
+
+
+def connect_interactive(host, user, port):
+    """Open actual Windows SSH shell without alias; password typed in terminal."""
+    host, user = str(host).strip(), str(user).strip()
+    port = int(port)
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.:-]{0,252}", host):
+        raise ValueError("Nieprawidlowy host SSH.")
+    if not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.@-]{0,89}", user):
+        raise ValueError("Nieprawidlowy login SSH.")
+    if not 1 <= port <= 65535:
+        raise ValueError("Nieprawidlowy port SSH.")
+    subprocess.Popen([
+        "cmd.exe", "/d", "/c", "start", '""', "cmd.exe", "/k",
+        "ssh.exe", "-F", "none", "-p", str(port), "-l", user, host
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

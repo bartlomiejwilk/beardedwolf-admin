@@ -1589,8 +1589,12 @@ class AdminApp:
         self.append_log("Wpisz domenę i wybierz testy. Żaden test nie uruchamia się automatycznie.")
 
     def build_servers(self, tab):
-        ttk.Label(tab, text="Zapisane serwery (lokalnie, bez haseł):",
+        ttk.Label(tab, text="Zapisane serwery (metadane z rejestru, bez haseł):",
                   font=("Sans", 11, "bold")).pack(anchor="w")
+        self.ssh_local_notice = tk.StringVar(value="")
+        ttk.Label(tab, textvariable=self.ssh_local_notice,
+                  wraplength=1080, justify="left").pack(
+            fill="x", anchor="w", pady=(6, 8))
         block = ttk.Frame(tab)
         block.pack(fill="x", pady=(6, 12))
         self.server_list = ttk.Treeview(block, columns=("alias", "host", "user", "port"),
@@ -1878,6 +1882,19 @@ class AdminApp:
     def refresh_servers(self):
         try:
             self.profiles = bw_servers.load_profiles()
+            if bw_servers.ssh_paused():
+                active = bw_servers.locally_active_profiles(self.profiles)
+                self.ssh_local_notice.set(
+                    "SSH WSTRZYMANE NA TYM KOMPUTERZE. Wspolny rejestr zawiera "
+                    f"{len(self.profiles)} profili, lokalnie aktywnych: {len(active)}. "
+                    "Stare aliasy nie sa teraz uzywane. Wlaczaj je pojedynczo po "
+                    "sprawdzeniu klucza i uprawnien."
+                )
+            else:
+                self.ssh_local_notice.set(
+                    "SSH lokalnie aktywne. Sam zapis profilu NIE potwierdza "
+                    "dzialajacego logowania ani poprawnego klucza."
+                )
             for item in self.server_list.get_children():
                 self.server_list.delete(item)
             for index, p in enumerate(self.profiles):

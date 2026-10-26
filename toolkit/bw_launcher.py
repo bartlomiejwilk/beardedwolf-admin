@@ -8,12 +8,14 @@ import bw_gui
 import bw_console
 import bw_theme
 import bw_ops_access
+import bw_ops_paths
 
 
 class OperationsApp(bw_gui.AdminApp):
     def build(self):
         super().build()
         bw_ops_access.build(self)
+        bw_ops_paths.build(self)
 
     def build_dashboard(self, tab):
         self.dashboard_search = tk.StringVar(value="")

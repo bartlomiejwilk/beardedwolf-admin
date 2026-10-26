@@ -140,6 +140,7 @@ class AdminApp:
                                         for s in startup_sites})
         combo = ttk.Combobox(header, textvariable=self.dashboard_filter,
                              values=groups, width=15, state="readonly")
+        self.dashboard_group_combo = combo
         combo.pack(side="right")
         combo.bind("<<ComboboxSelected>>", lambda _event: self.draw_dashboard())
         ttk.Label(header, text="Grupa:").pack(side="right", padx=(6, 4))
@@ -185,6 +186,10 @@ class AdminApp:
         except (OSError, ValueError, RuntimeError) as exc:
             self.dashboard_hint.set("Błąd odczytu listy domen: " + str(exc))
             return
+        groups = ["Wszystkie"] + sorted({s.get("group", "inne") for s in sites})
+        self.dashboard_group_combo.configure(values=groups)
+        if self.dashboard_filter.get() not in groups:
+            self.dashboard_filter.set("Wszystkie")
         filter_name = self.dashboard_filter.get()
         if filter_name != "Wszystkie":
             sites = [s for s in sites if s.get("group") == filter_name]

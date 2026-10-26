@@ -52,7 +52,17 @@ def check(domain):
         try:
             response = opener.open(request, timeout=TIMEOUT)
         except urllib.error.HTTPError as exc:
-            response = exc
+            if exc.code in (405, 501):
+                # Some websites reject HEAD but serve GET correctly.
+                # Never read the response body; keep the check lightweight.
+                exc.close()
+                request = urllib.request.Request(url, headers=HEADERS, method="GET")
+                try:
+                    response = opener.open(request, timeout=TIMEOUT)
+                except urllib.error.HTTPError as retry:
+                    response = retry
+            else:
+                response = exc
         with response:
             code = int(response.status if hasattr(response, "status") else response.code)
             result["http"] = code

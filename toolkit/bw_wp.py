@@ -20,6 +20,7 @@ WP_VERSION = re.compile(r"[0-9]+(?:\.[0-9]+){1,3}\Z")
 
 
 def environment(site):
+    bw_servers.require_ssh_enabled()
     if not site.get("authorized") or site.get("type") != "wordpress":
         raise ValueError("Serwis musi mieć zatwierdzony zakres i platformę WordPress")
     root = bw_fleet.validate_wp_root(site.get("wp_root"))

@@ -5,12 +5,14 @@ access; passwords remain in their original clients. Updates existing shared
 sites.json only after explicit confirmation.
 """
 import tkinter as tk
+import threading
 from tkinter import messagebox, ttk
 
 import bw_fleet
 import bw_integrity
 import bw_servers
 import bw_windows_saved
+import bw_ssh_direct
 
 
 def _provider(host):
@@ -60,6 +62,8 @@ def build(app):
     ttk.Button(row, text="Zapisz powiazanie",
                style="Accent.TButton",
                command=lambda: assign(app)).pack(side="left", padx=(12, 0))
+    ttk.Button(row, text="Test SSH bez aliasu",
+               command=lambda: test_selected(app)).pack(side="left", padx=(8, 0))
     app.mapping_hint = tk.StringVar(value="Najpierw wybierz domene i polaczenie.")
     ttk.Label(tab, textvariable=app.mapping_hint, wraplength=1100).pack(
         anchor="w", fill="x", pady=(4, 0)
@@ -196,3 +200,45 @@ def assign(app):
     refresh(app)
     app.refresh_fleet()
     app.mapping_hint.set("Zapisano powiazanie dla: " + domain)
+
+
+def test_selected(app):
+    """Single opt-in public-key check of selected SSH/SFTP host/user/port."""
+    chosen = app.mapping_pick.get()
+    entry = getattr(app, "mapping_candidates", {}).get(chosen)
+    if not entry:
+        messagebox.showwarning("Brak polaczenia", "Wybierz SSH lub SFTP.",
+                               parent=app.root)
+        return
+    if entry["kind"] == "ssh":
+        p = entry["profile"]
+        host, user, port = p["host"], p["user"], p["port"]
+    else:
+        p = entry["entry"]
+        if p["protocol"] != "SFTP":
+            messagebox.showwarning("To nie jest SSH",
+                                   "Dla FTP/FTPS sprawdz logowanie w FileZilli.",
+                                   parent=app.root)
+            return
+        host, user, port = p["host"], p["user"], p["port"]
+    text = ("Testowac raz bezposrednie uwierzytelnienie Windows SSH "
+            "BEZ aliasow, hasla i interakcji?\\n\\n%s@%s:%s\\n\\n"
+            "Brak poprawnego klucza nie oznacza nieaktywnego konta." %
+            (user, host, port))
+    if not messagebox.askyesno("Test SSH bez aliasu", text, parent=app.root):
+        return
+    app.mapping_hint.set("Trwa jednorazowy test SSH %s@%s:%s" %
+                         (user, host, port))
+    def run():
+        try:
+            status, detail = bw_ssh_direct.test_direct(host, user, port)
+        except (OSError, RuntimeError, ValueError) as exc:
+            status, detail = "BLAD", str(exc)
+        def completed():
+            app.mapping_hint.set("SSH %s@%s:%s - %s: %s" %
+                                 (user, host, port, status, detail))
+        try:
+            app.root.after(0, completed)
+        except RuntimeError:
+            pass
+    threading.Thread(target=run, daemon=True).start()

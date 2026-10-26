@@ -1491,7 +1491,7 @@ class AdminApp:
             "Testy DNS, TLS i WWW są pasywne. Nie skanują portów, nie logują się do serwisów ani nie sprawdzają podatności aktywnymi metodami.",
             "Każde uruchomienie wybranych testów tworzy jeden raport HTML w ~/beardedwolf/raporty/PAKIET.",
             "Eksport do Syncthing wymaga zaznaczenia pola na karcie Testy domen. Raporty poufne powinny pozostać lokalne, szczególnie na komputerze bez szyfrowania dysku.",
-            "Profile serwerów zapisują tylko alias, host, port i użytkownika w ~/.config/beardedwolf/servers.json, a konfiguracja SSH powstaje w ~/.ssh/config. Żadnych haseł ani prywatnych kluczy nie przesyłamy do GitHuba.",
+            "Profile serwerów zawierają tylko alias, host, port i login. Po włączeniu Synchronizacji metadane trafiają do folderu Syncthing, a lokalna konfiguracja SSH jest odtwarzana osobno na każdym komputerze. Kluczy prywatnych i haseł nie przesyłamy.",
             "Każdy profil serwera ma oddzielny klucz SSH na danym komputerze, niezależny również od klucza GitHub. Autoryzacja klucza na serwerze odbywa się tylko po Twojej decyzji.",
         ]
         for paragraph in paragraphs:

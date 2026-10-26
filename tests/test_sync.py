@@ -44,7 +44,9 @@ class SyncthingMetadataTests(unittest.TestCase):
         self.patches = [
             patch.object(bw_sync, "CONFIG", self.sync_config),
             patch.object(fleet, "SITES_FILE", self.sites),
+            patch.object(fleet, "DEFAULT_SITES_FILE", self.sites),
             patch.object(bw_servers, "PROFILE_FILE", self.profiles),
+            patch.object(bw_servers, "DEFAULT_PROFILE_FILE", self.profiles),
             patch.object(bw_servers, "CONFIG_DIR", self.settings),
             patch.object(bw_servers, "SSH_DIR", self.sshdir),
             patch.object(bw_servers, "SSH_CONFIG", self.sshdir / "config")

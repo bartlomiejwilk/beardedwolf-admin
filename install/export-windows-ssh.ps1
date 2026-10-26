@@ -21,6 +21,33 @@ if (Test-Path -LiteralPath $inputFile) {
     }
     if ($null -ne $current -and $current.host) { $records += $current }
 }
+# Read only public endpoint properties from PuTTY and WinSCP sessions.
+# No password fields or key locations are accessed.
+$registrySources = @(
+    @{ label="putty"; location="Software\SimonTatham\PuTTY\Sessions" },
+    @{ label="winscp"; location="Software\Martin Prikryl\WinSCP 2\Sessions" }
+)
+foreach ($source in $registrySources) {
+    $root = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($source.location)
+    if ($null -eq $root) { continue }
+    foreach ($keyName in $root.GetSubKeyNames()) {
+        $session = $root.OpenSubKey($keyName)
+        if ($null -eq $session) { continue }
+        $hostName = [string]$session.GetValue("HostName", "")
+        if (!$hostName) { continue }
+        $userName = [string]$session.GetValue("UserName", "")
+        $portNumber = $session.GetValue("PortNumber", 22)
+        $protocolName = if ($source.label -eq "putty") {
+            [string]$session.GetValue("Protocol", "ssh")
+        } else { "winscp-session" }
+        $records += [ordered]@{
+            alias=$keyName; host=$hostName; user=$userName
+            port=$portNumber; protocol=$protocolName; source=$source.label
+        }
+        $session.Close()
+    }
+    $root.Close()
+}
 $outputFile = Join-Path $outputFolder ("ssh-" + $env:COMPUTERNAME + ".json")
 if (Test-Path -LiteralPath $outputFile) { throw "Plik juz istnieje. Zrob kopie lub wybierz inna nazwe: $outputFile" }
 @{ schema=1; device=$env:COMPUTERNAME; profiles=@($records) } |
